@@ -1,0 +1,24 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: task build then task polish
+
+tasks:
+  default:
+    cmds:
+      - echo "{{.GREETING}}"
+      - task --list-all
+    silent: true
+  build:
+    cmds:
+      - python ./fontforge_script.py
+      - ls -lt build
+    silent: true
+  polish:
+    cmds:
+      - python ./fonttools_script.py
+      - ls -lt build
+    silent: true
+
