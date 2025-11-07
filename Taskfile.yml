@@ -3,22 +3,229 @@
 version: '3'
 
 vars:
-  GREETING: task build then task polish
+  GREETING: "PlemolKR Font Build System"
+  VERSION:
+    sh: grep "VERSION" build.ini | cut -d "=" -f 2 | tr -d " "
 
 tasks:
   default:
+    desc: 빌드 시스템 정보 표시
+    silent: true
     cmds:
       - echo "{{.GREETING}}"
+      - echo "버전{{"{{"}} .VERSION {{"}}"}}"
+      - echo ""
       - task --list-all
-    silent: true
-  build:
-    cmds:
-      - python ./fontforge_script.py
-      - ls -lt build
-    silent: true
-  polish:
-    cmds:
-      - python ./fonttools_script.py
-      - ls -lt build
-    silent: true
 
+  # ============================================
+  # 기본 빌드 태스크
+  # ============================================
+
+  build:
+    desc: 기본 빌드 (1:2 비율)
+    cmds:
+      - python fontforge_script.py
+      - echo "✅ 기본 빌드 완료"
+
+  build:35:
+    desc: 3:5 비율 빌드
+    cmds:
+      - python fontforge_script.py --35 --do-not-delete-build-dir
+      - echo "✅ 3:5 비율 빌드 완료"
+
+  build:console:
+    desc: 콘솔 모드 빌드 (1:2 비율)
+    cmds:
+      - python fontforge_script.py --console --do-not-delete-build-dir
+      - echo "✅ 콘솔 모드 빌드 완료"
+
+  build:console35:
+    desc: 콘솔 모드 빌드 (3:5 비율)
+    cmds:
+      - python fontforge_script.py --console --35 --do-not-delete-build-dir
+      - echo "✅ 콘솔 모드 (3:5) 빌드 완료"
+
+  build:nf:
+    desc: Nerd Fonts 포함 빌드 (1:2 비율)
+    cmds:
+      - python fontforge_script.py --nerd-font --do-not-delete-build-dir
+      - echo "✅ Nerd Fonts 빌드 완료"
+
+  build:nf35:
+    desc: Nerd Fonts 포함 빌드 (3:5 비율)
+    cmds:
+      - python fontforge_script.py --nerd-font --35 --do-not-delete-build-dir
+      - echo "✅ Nerd Fonts (3:5) 빌드 완료"
+
+  build:console-nf:
+    desc: 콘솔 모드 + Nerd Fonts (1:2 비율)
+    cmds:
+      - python fontforge_script.py --console --nerd-font --do-not-delete-build-dir
+      - echo "✅ 콘솔 + Nerd Fonts 빌드 완료"
+
+  build:console-nf35:
+    desc: 콘솔 모드 + Nerd Fonts (3:5 비율)
+    cmds:
+      - python fontforge_script.py --console --nerd-font --35 --do-not-delete-build-dir
+      - echo "✅ 콘솔 + Nerd Fonts (3:5) 빌드 완료"
+
+  build:hs:
+    desc: 전각 스페이스 숨김 빌드 (1:2 비율)
+    cmds:
+      - python fontforge_script.py --hidden-zenkaku-space --do-not-delete-build-dir
+      - echo "✅ 전각 스페이스 숨김 빌드 완료"
+
+  build:hs35:
+    desc: 전각 스페이스 숨김 빌드 (3:5 비율)
+    cmds:
+      - python fontforge_script.py --hidden-zenkaku-space --35 --do-not-delete-build-dir
+      - echo "✅ 전각 스페이스 숨김 (3:5) 빌드 완료"
+
+  # ============================================
+  # 폰트 최종 처리 태스크
+  # ============================================
+
+  polish:
+    desc: 빌드된 폰트 최종 처리 (힌팅 및 병합)
+    cmds:
+      - python fonttools_script.py
+      - echo "✅ 폰트 최종 처리 완료"
+
+  polish:variant:
+    desc: 특정 변형 폰트만 처리
+    cmds:
+      - python fonttools_script.py {{.VARIANT}}
+      - echo "✅ {{.VARIANT}} 변형 처리 완료"
+
+  # ============================================
+  # 전체 빌드 워크플로우
+  # ============================================
+
+  full:
+    desc: 전체 빌드 (1:2 + 3:5 비율)
+    cmds:
+      - echo "🚀 전체 빌드 시작..."
+      - task clean
+      - task build
+      - task build:35
+      - task polish
+      - echo "✅ 전체 빌드 완료!"
+      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools
+
+  full:all:
+    desc: 모든 변형 빌드 (기본 + 3:5 + 콘솔)
+    cmds:
+      - echo "🚀 모든 변형 빌드 시작..."
+      - task clean
+      - task build
+      - task build:35
+      - task build:console
+      - task build:console35
+      - task polish
+      - echo "✅ 모든 변형 빌드 완료!"
+      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools
+
+  full:nerd:
+    desc: Nerd Fonts 포함 전체 빌드
+    cmds:
+      - echo "🚀 Nerd Fonts 전체 빌드 시작..."
+      - task clean
+      - task build:console-nf
+      - task build:console-nf35
+      - task polish
+      - echo "✅ Nerd Fonts 전체 빌드 완료!"
+      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools
+
+  # ============================================
+  # 빠른 빌드 (디버그)
+  # ============================================
+
+  quick:
+    desc: 빠른 빌드 (Regular 웨이트만)
+    cmds:
+      - python fontforge_script.py --debug
+      - python fonttools_script.py
+      - ls -lh build/PlemolKR-Regular.ttf
+      - echo "✅ 빠른 빌드 완료 (Regular만)"
+
+  quick:35:
+    desc: 빠른 빌드 (3:5 비율, Regular만)
+    cmds:
+      - python fontforge_script.py --debug --35
+      - python fonttools_script.py 35
+      - ls -lh build/PlemolKR35-Regular.ttf
+      - echo "✅ 빠른 빌드 완료 (3:5, Regular만)"
+
+  # ============================================
+  # 유틸리티 태스크
+  # ============================================
+
+  clean:
+    desc: 빌드 디렉토리 정리
+    cmds:
+      - rm -rf build
+      - mkdir -p build
+      - echo "✅ 빌드 디렉토리 정리 완료"
+
+  check:
+    desc: 생성된 폰트 파일 확인
+    cmds:
+      - echo "📊 생성된 폰트 파일 목록:"
+      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools || echo "폰트 파일이 없습니다."
+      - echo ""
+      - echo "📈 글리프 수 확인:"
+      - python work_scripts/check_glyph_number.py build/PlemolKR-Regular.ttf 2>/dev/null || echo "Regular 폰트를 찾을 수 없습니다."
+
+  verify:
+    desc: 한글/일본어 문자 확인
+    cmds:
+      - |
+        python3 -c "
+        import fontforge
+        font = fontforge.open('build/PlemolKR-Regular.ttf')
+        korean = [(0xAC00, '가'), (0xD7A3, '힣')]
+        japanese = [(0x3042, 'あ'), (0x30A2, 'ア')]
+        print('한글:', all(c in font for c, _ in korean))
+        print('일본어:', all(c in font for c, _ in japanese))
+        font.close()
+        "
+
+  install:
+    desc: 폰트를 시스템에 설치 (macOS)
+    cmds:
+      - cp build/PlemolKR-*.ttf ~/Library/Fonts/
+      - echo "✅ 폰트 설치 완료 (~/Library/Fonts/)"
+
+  # ============================================
+  # 릴리스 준비
+  # ============================================
+
+  release:
+    desc: 릴리스 파일 준비
+    vars:
+      TIMESTAMP:
+        sh: date +%Y%m%d%H%M%S
+    cmds:
+      - mkdir -p release_files/build_{{.TIMESTAMP}}
+      - cp build/PlemolKR*.ttf release_files/build_{{.TIMESTAMP}}/ 2>/dev/null || true
+      - echo "✅ 릴리스 파일 준비 완료 release_files/build_{{.TIMESTAMP}}/"
+      - ls -lh release_files/build_{{.TIMESTAMP}}/
+
+  # ============================================
+  # 정보 표시
+  # ============================================
+
+  info:
+    desc: 빌드 환경 정보 표시
+    cmds:
+      - echo "📦 PlemolKR 빌드 시스템"
+      - echo "버전{{"{{"}} .VERSION {{"}}"}}"
+      - echo ""
+      - echo "🐍 Python 버전:"
+      - python --version
+      - echo ""
+      - echo "🔧 FontForge 버전:"
+      - fontforge --version 2>&1 | head -1 || echo "FontForge를 찾을 수 없습니다"
+      - echo ""
+      - echo "📚 설치된 패키지:"
+      - pip3 list | grep -E "fonttools|ttfautohint" || echo "필요한 패키지를 설치하세요"
