@@ -20,6 +20,7 @@ settings.read("build.ini", encoding="utf-8")
 VERSION = settings.get("DEFAULT", "VERSION")
 FONT_NAME = settings.get("DEFAULT", "FONT_NAME")
 JP_FONT = settings.get("DEFAULT", "JP_FONT")
+KR_FONT = settings.get("DEFAULT", "KR_FONT")
 ENG_FONT = settings.get("DEFAULT", "ENG_FONT")
 HACK_FONT = settings.get("DEFAULT", "HACK_FONT")
 SOURCE_FONTS_DIR = settings.get("DEFAULT", "SOURCE_FONTS_DIR")
@@ -198,8 +199,14 @@ def get_options():
 def generate_font(jp_style, eng_style, merged_style):
     print(f"=== Generate {merged_style} ===")
 
-    # 合成するフォントを開く
-    jp_font, eng_font = open_fonts(jp_style, eng_style)
+    # 合成するフォントを開く (JP, KR, ENG)
+    jp_font, kr_font, eng_font = open_fonts(jp_style, eng_style)
+
+    # 韓国語グリフをJPフォントにマージする
+    merge_kr_glyphs(jp_font, kr_font)
+
+    # KRフォントを閉じる (マージが完了したので不要)
+    kr_font.close()
 
     # フォントのEMを揃える
     adjust_em(eng_font)
@@ -301,9 +308,12 @@ def generate_font(jp_style, eng_style, merged_style):
 
 
 def open_fonts(jp_style: str, eng_style: str):
-    """フォントを開く"""
+    """フォントを開く (JP, KR, ENG の3つ)"""
     jp_font = fontforge.open(
         SOURCE_FONTS_DIR + "/" + JP_FONT.replace("{style}", jp_style)
+    )
+    kr_font = fontforge.open(
+        SOURCE_FONTS_DIR + "/" + KR_FONT.replace("{style}", jp_style)
     )
     eng_font = fontforge.open(
         SOURCE_FONTS_DIR + "/" + ENG_FONT.replace("{style}", eng_style)
@@ -314,14 +324,45 @@ def open_fonts(jp_style: str, eng_style: str):
         if glyph.isWorthOutputting():
             jp_font.selection.select(("more", None), glyph)
     jp_font.unlinkReferences()
+    for glyph in kr_font.glyphs():
+        if glyph.isWorthOutputting():
+            kr_font.selection.select(("more", None), glyph)
+    kr_font.unlinkReferences()
     for glyph in eng_font.glyphs():
         if glyph.isWorthOutputting():
             eng_font.selection.select(("more", None), glyph)
     eng_font.unlinkReferences()
     jp_font.selection.none()
+    kr_font.selection.none()
     eng_font.selection.none()
 
-    return jp_font, eng_font
+    return jp_font, kr_font, eng_font
+
+
+def merge_kr_glyphs(jp_font, kr_font):
+    """韓国語グリフをKRフォントからJPフォントにマージする"""
+    # 韓国語ハングル音節 (가~힣)
+    kr_font.selection.select(("ranges", None), 0xAC00, 0xD7A3)
+    # 韓国語ハングル字母 (ㄱ~ㆎ)
+    kr_font.selection.select(("ranges", "more"), 0x3131, 0x318E)
+    # ハングル字母拡張-A
+    kr_font.selection.select(("ranges", "more"), 0xA960, 0xA97F)
+    # ハングル字母拡張-B
+    kr_font.selection.select(("ranges", "more"), 0xD7B0, 0xD7FF)
+
+    # 選択したグリフをコピー
+    kr_font.copy()
+
+    # JPフォントに貼り付け (既存のグリフを上書き)
+    jp_font.selection.select(("ranges", None), 0xAC00, 0xD7A3)
+    jp_font.selection.select(("ranges", "more"), 0x3131, 0x318E)
+    jp_font.selection.select(("ranges", "more"), 0xA960, 0xA97F)
+    jp_font.selection.select(("ranges", "more"), 0xD7B0, 0xD7FF)
+    jp_font.paste()
+
+    # 選択解除
+    kr_font.selection.none()
+    jp_font.selection.none()
 
 
 def adjust_some_glyph(jp_font, eng_font, style="Regular"):
