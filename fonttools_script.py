@@ -15,6 +15,10 @@ settings = configparser.ConfigParser()
 settings.read("build.ini", encoding="utf-8")
 
 FONT_NAME = settings.get("DEFAULT", "FONT_NAME")
+try:
+    NEW_FONT_NAME = settings.get("DEFAULT", "NEW_FONT_NAME")
+except (configparser.NoOptionError, configparser.NoSectionError):
+    NEW_FONT_NAME = FONT_NAME
 FONTFORGE_PREFIX = settings.get("DEFAULT", "FONTFORGE_PREFIX")
 FONTTOOLS_PREFIX = settings.get("DEFAULT", "FONTTOOLS_PREFIX")
 BUILD_FONTS_DIR = settings.get("DEFAULT", "BUILD_FONTS_DIR")
@@ -125,7 +129,7 @@ def fix_font_tables(style, variant):
 
     input_font_name = f"{FONTTOOLS_PREFIX}{FONT_NAME}{variant}-{style}_merged.ttf"
     output_name_base = f"{FONTTOOLS_PREFIX}{FONT_NAME}{variant}-{style}"
-    completed_name_base = f"{FONT_NAME.replace(' ', '')}{variant}-{style}"
+    completed_name_base = f"{NEW_FONT_NAME.replace(' ', '')}{variant}-{style}"
 
     # OS/2, post テーブルのみのttxファイルを出力
     xml = dump_ttx(input_font_name, output_name_base)
@@ -134,7 +138,7 @@ def fix_font_tables(style, variant):
     # post テーブルを編集
     fix_post_table(xml, flag_35=WIDTH_35_STR in variant)
     # name テーブルを編集
-    fix_name_table(xml)
+    fix_name_table(xml, style, variant)
 
     # ttxファイルを上書き保存
     xml.write(
@@ -264,15 +268,73 @@ def fix_post_table(xml: ET, flag_35):
     xml.find("post/isFixedPitch").set("value", str(is_fixed_pitch))
 
 
-def fix_name_table(xml: ET):
+def fix_name_table(xml: ET, style: str, variant: str):
     """name テーブルを編集する
     何故か謎の内容の著作権フィールドが含まれてしまうので、削除する。
+    また、フォント名を明示的に設定する。
     """
-    # タグ形式: <namerecord nameID="0" platformID="1" platEncID="0" langID="0x0" unicode="True">COPYLIGHT</namerecord>
     parent = xml.find("name")
+    
+    # 著作権フィールド(nameID=0)에서 FONT_NAME이 포함되지 않은 항목 삭제
     for element in parent.findall("namerecord[@nameID='0']"):
-        if "PlemolJP" not in element.text:
+        if FONT_NAME not in element.text:
             parent.remove(element)
+    
+    # フォント名を生成 (fontforge_script.pyのedit_meta_dataと同じロジック)
+    font_family = NEW_FONT_NAME
+    if variant != "":
+        font_family += f" {variant}".replace(" 35", "35")
+    
+    if style == "Regular" or style == "Italic" or style == "Bold" or style == "BoldItalic":
+        font_weight = style
+        if style == "BoldItalic":
+            font_weight = "Bold Italic"
+    else:
+        font_weight = style
+        if "Italic" in style:
+            font_weight = font_weight.replace("Italic", " Italic")
+    
+    font_family_name = font_family
+    font_subfamily_name = font_weight
+    full_font_name = f"{font_family} {font_weight}"
+    postscript_name = f"{font_family}-{font_weight}".replace(" ", "")
+    
+    # nameID 1: Font Family name
+    update_name_records(parent, 1, font_family_name)
+    
+    # nameID 2: Font Subfamily name
+    update_name_records(parent, 2, font_subfamily_name)
+    
+    # nameID 4: Full font name
+    update_name_records(parent, 4, full_font_name)
+    
+    # nameID 6: PostScript name
+    update_name_records(parent, 6, postscript_name)
+    
+    # nameID 16, 17: Typographic Family/Subfamily name (Regular/Italic/Bold/BoldItalic以外の場合)
+    if style != "Regular" and style != "Italic" and style != "Bold" and style != "BoldItalic":
+        update_name_records(parent, 16, font_family)
+        update_name_records(parent, 17, font_weight)
+
+
+def update_name_records(parent: ET.Element, name_id: int, text: str):
+    """nameテーブルの特定nameIDのレコードを更新または作成する"""
+    # 既存のレコード 찾기
+    existing_records = parent.findall(f"namerecord[@nameID='{name_id}']")
+    
+    if existing_records:
+        # 既存レコードの値を更新
+        for record in existing_records:
+            record.text = text
+    else:
+        # 新しいレコードを作成 (Windows Unicode, English US)
+        # platformID=3 (Windows), platEncID=1 (Unicode BMP), langID=0x409 (English US)
+        new_record = ET.SubElement(parent, "namerecord")
+        new_record.set("nameID", str(name_id))
+        new_record.set("platformID", "3")
+        new_record.set("platEncID", "1")
+        new_record.set("langID", "0x409")
+        new_record.text = text
 
 
 if __name__ == "__main__":
