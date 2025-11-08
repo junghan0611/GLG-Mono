@@ -82,6 +82,15 @@ def main():
     if options.get("debug"):
         return
 
+    # ミニマルモードの場合は Regular, Bold, Italic のみ生成
+    if options.get("minimal"):
+        generate_font(
+            jp_style="Bold",
+            eng_style="Bold",
+            merged_style="Bold",
+        )
+        return
+
     generate_font(
         jp_style="Bold",
         eng_style="Bold",
@@ -164,7 +173,8 @@ def main():
 def usage():
     print(
         f"Usage: {sys.argv[0]} "
-        "[--hidden-zenkaku-space] [--35] [--console] [--nerd-font]"
+        "[--hidden-zenkaku-space] [--35] [--console] [--nerd-font] "
+        "[--debug] [--minimal] [--do-not-delete-build-dir]"
     )
 
 
@@ -183,6 +193,8 @@ def get_options():
             options["do-not-delete-build-dir"] = True
         elif arg == "--debug":
             options["debug"] = True
+        elif arg == "--minimal":
+            options["minimal"] = True
         elif arg == "--hidden-zenkaku-space":
             options["hidden-zenkaku-space"] = True
         elif arg == "--35":

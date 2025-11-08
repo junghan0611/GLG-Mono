@@ -156,6 +156,19 @@ tasks:
       - ls -lh build/PlemolKR35-Regular.ttf
       - echo "✅ 빠른 빌드 완료 (3:5, Regular만)"
 
+  quick:nerd:
+    desc: 빠른 Nerd Fonts 빌드 (Console 1:2 + 3:5, Regular/Bold만)
+    cmds:
+      - echo "🚀 빠른 Nerd Fonts 빌드 시작..."
+      - python fontforge_script.py --console --nerd-font --minimal
+      - python fontforge_script.py --console --nerd-font --35 --minimal --do-not-delete-build-dir
+      - python fonttools_script.py
+      - echo ""
+      - echo "✅ 빠른 Nerd Fonts 빌드 완료!"
+      - echo ""
+      - echo "📊 생성된 폰트 목록:"
+      - ls -lh build/PlemolKRConsoleNF-*.ttf build/PlemolKRConsoleNF35-*.ttf 2>/dev/null || echo "폰트를 찾을 수 없습니다"
+
   # ============================================
   # 유틸리티 태스크
   # ============================================
