@@ -266,7 +266,7 @@ tasks:
       - python work_scripts/check_glyph_number.py build/PlemolKR-Regular.ttf 2>/dev/null || echo "Regular 폰트를 찾을 수 없습니다."
 
   verify:
-    desc: 한글/일본어 문자 확인
+    desc: 한글/일본어/이모지 문자 확인
     cmds:
       - |
         python3 -c "
@@ -274,8 +274,110 @@ tasks:
         font = fontforge.open('build/PlemolKR-Regular.ttf')
         korean = [(0xAC00, '가'), (0xD7A3, '힣')]
         japanese = [(0x3042, 'あ'), (0x30A2, 'ア')]
+        emoji = [
+            (0x2713, '✓', 'Check mark'),
+            (0x2714, '✔', 'Heavy check mark'),
+            (0x2717, '✗', 'Ballot X'),
+            (0x2718, '✘', 'Heavy ballot X'),
+            (0x274C, '❌', 'Cross mark')
+        ]
         print('한글:', all(c in font for c, _ in korean))
         print('일본어:', all(c in font for c, _ in japanese))
+        print('이모지:')
+        for code, char, name in emoji:
+            present = code in font
+            status = '✓' if present else '✗'
+            print(f'  {status} U+{code:04X} {char} ({name})')
+        font.close()
+        "
+
+  verify:nerd:
+    desc: Nerd Fonts 아이콘 확인
+    cmds:
+      - |
+        python3 -c "
+        import fontforge
+        import sys
+        import os
+
+        # Nerd Fonts 파일 찾기 (두 가지 경로 확인)
+        nf_fonts = []
+
+        # 1. build 디렉토리 - fontforge_script.py --nerd-font로 빌드된 파일
+        if os.path.exists('build'):
+            for f in os.listdir('build'):
+                if 'NF' in f and f.endswith('.ttf') and not f.startswith('fontforge') and not f.startswith('fonttools'):
+                    nf_fonts.append(os.path.join('build', f))
+
+        # 2. build/nerd 디렉토리 - FontPatcher로 패치된 파일
+        if os.path.exists('build/nerd'):
+            for f in os.listdir('build/nerd'):
+                if f.endswith('.ttf'):
+                    nf_fonts.append(os.path.join('build/nerd', f))
+
+        if not nf_fonts:
+            print('❌ Nerd Fonts 폰트를 찾을 수 없습니다.')
+            print('   먼저 빌드를 실행하세요:')
+            print('   - task build:nf 또는 task quick:nerd (내장 빌드)')
+            print('   - task patch:nerd:all (FontPatcher 패치)')
+            sys.exit(0)
+
+        # 첫 번째 Nerd Fonts 파일 확인
+        font_path = sorted(nf_fonts)[0]
+        print(f'확인 중: {os.path.basename(font_path)}')
+        print()
+
+        font = fontforge.open(font_path)
+
+        # Nerd Fonts 주요 범위 확인
+        nerd_ranges = [
+            ('Powerline', [
+                (0xE0A0, 'Branch'),
+                (0xE0A1, 'Line number'),
+                (0xE0A2, 'Readonly'),
+                (0xE0B0, 'Left hard divider'),
+                (0xE0B2, 'Right hard divider'),
+            ]),
+            ('Devicons', [
+                (0xE700, 'Aarch64'),
+                (0xE779, 'GNU'),
+                (0xE7A2, 'CouchDB'),
+            ]),
+            ('Font Awesome', [
+                (0xF015, 'House'),
+                (0xF07B, 'Folder'),
+                (0xF09B, 'GitHub'),
+                (0xF113, 'GitHub Alt'),
+                (0xF121, 'Code'),
+            ]),
+            ('Octicons', [
+                (0xF400, 'Light bulb'),
+                (0xF417, 'Git commit'),
+            ]),
+            ('Pomicons', [
+                (0xE000, 'Clean code'),
+            ]),
+        ]
+
+        for category, icons in nerd_ranges:
+            print(f'{category}:')
+            for code, name in icons:
+                present = code in font
+                status = '✓' if present else '✗'
+                char = chr(code)
+                print(f'  {status} U+{code:04X} {char} ({name})')
+            print()
+
+        # 전체 통계
+        powerline_range = sum(1 for i in range(0xE0A0, 0xE0D8) if i in font)
+        devicons_range = sum(1 for i in range(0xE700, 0xE7C6) if i in font)
+        fontawesome_range = sum(1 for i in range(0xF000, 0xF2E1) if i in font)
+
+        print('범위별 통계:')
+        print(f'  Powerline (E0A0-E0D7): {powerline_range}/56 글리프')
+        print(f'  Devicons (E700-E7C5): {devicons_range}/198 글리프')
+        print(f'  Font Awesome (F000-F2E0): {fontawesome_range}/737 글리프')
+
         font.close()
         "
 
