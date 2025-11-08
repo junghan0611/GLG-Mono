@@ -55,7 +55,6 @@ Copyright (c) 2021, Yuko Otawara
 """  # noqa: E501
 
 options = {}
-nerd_font = None
 
 
 def main():
@@ -813,7 +812,10 @@ def make_box_drawing_full_width(eng_font, jp_font):
     for glyph in jp_font.selection.byGlyphs:
         glyph.clear()
     jp_font.selection.none()
-    jp_font.mergeFonts(fontforge.open(f"{SOURCE_FONTS_DIR}/FullWidthBoxDrawings.sfd"))
+    # リソース管理のため、フォントを明示的に開いて閉じる
+    box_drawing_font = fontforge.open(f"{SOURCE_FONTS_DIR}/FullWidthBoxDrawings.sfd")
+    jp_font.mergeFonts(box_drawing_font)
+    box_drawing_font.close()
     # 幅設定と位置調整
     width_to = jp_font[0x3042].width
     jp_font.selection.select(("unicode", "ranges"), 0x2500, 0x257F)
@@ -834,7 +836,10 @@ def visualize_zenkaku_space(jp_font):
     glyph = jp_font[0x3000]
     width_to = glyph.width
     glyph.clear()
-    jp_font.mergeFonts(fontforge.open(f"{SOURCE_FONTS_DIR}/{IDEOGRAPHIC_SPACE}"))
+    # リソース管理のため、フォントを明示的に開いて閉じる
+    space_font = fontforge.open(f"{SOURCE_FONTS_DIR}/{IDEOGRAPHIC_SPACE}")
+    jp_font.mergeFonts(space_font)
+    space_font.close()
     # 幅を設定し位置調整
     jp_font.selection.select("U+3000")
     for glyph in jp_font.selection.byGlyphs:
@@ -1015,43 +1020,44 @@ def down_scale_redundant_size_glyph(eng_font):
 
 def add_nerd_font_glyphs(jp_font, eng_font):
     """Nerd Fontのグリフを追加する"""
-    global nerd_font
-    # Nerd Fontのグリフを追加する
-    if nerd_font is None:
-        nerd_font = fontforge.open(
-            f"{SOURCE_FONTS_DIR}/nerd-fonts/SymbolsNerdFont-Regular.ttf"
-        )
-        nerd_font.em = EM_ASCENT + EM_DESCENT
-        glyph_names = set()
-        for nerd_glyph in nerd_font.glyphs():
-            # Nerd Fontsのグリフ名をユニークにするため接尾辞を付ける
-            nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-nf"
-            # postテーブルでのグリフ名重複対策
-            # fonttools merge で合成した後、MacOSで `'post'テーブルの使用性` エラーが発生することへの対処
-            if nerd_glyph.glyphname in glyph_names:
-                nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-{nerd_glyph.encoding}"
-            glyph_names.add(nerd_glyph.glyphname)
-            # 幅を調整する
-            half_width = eng_font[0x0030].width
-            # Powerline Symbols の調整
-            if 0xE0B0 <= nerd_glyph.unicode <= 0xE0D7:
-                # 位置と幅合わせ
-                if nerd_glyph.width < half_width:
-                    nerd_glyph.transform(
-                        psMat.translate((half_width - nerd_glyph.width) / 2, 0)
-                    )
-                elif nerd_glyph.width > half_width:
-                    nerd_glyph.transform(psMat.scale(half_width / nerd_glyph.width, 1))
-                # グリフの高さ・位置を調整する
-                nerd_glyph.transform(psMat.scale(1, 1.14))
-                nerd_glyph.transform(psMat.translate(0, 21))
-            elif nerd_glyph.width < (EM_ASCENT + EM_DESCENT) * 0.6:
-                # 幅が狭いグリフは中央寄せとみなして調整する
+    # 複数のvariantを生成する場合、half_widthが異なるため、毎回ロードする必要がある
+    # (例: --35オプションの有無でhalf_widthが変わる)
+    nerd_font = fontforge.open(
+        f"{SOURCE_FONTS_DIR}/nerd-fonts/SymbolsNerdFont-Regular.ttf"
+    )
+    nerd_font.em = EM_ASCENT + EM_DESCENT
+    glyph_names = set()
+    half_width = eng_font[0x0030].width
+
+    for nerd_glyph in nerd_font.glyphs():
+        # Nerd Fontsのグリフ名をユニークにするため接尾辞を付ける
+        nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-nf"
+        # postテーブルでのグリフ名重複対策
+        # fonttools merge で合成した後、MacOSで `'post'テーブルの使用性` エラーが発生することへの対処
+        if nerd_glyph.glyphname in glyph_names:
+            nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-{nerd_glyph.encoding}"
+        glyph_names.add(nerd_glyph.glyphname)
+        # 幅を調整する
+        # Powerline Symbols の調整
+        if 0xE0B0 <= nerd_glyph.unicode <= 0xE0D7:
+            # 位置と幅合わせ
+            if nerd_glyph.width < half_width:
                 nerd_glyph.transform(
                     psMat.translate((half_width - nerd_glyph.width) / 2, 0)
                 )
-            # 幅を設定
-            nerd_glyph.width = half_width
+            elif nerd_glyph.width > half_width:
+                nerd_glyph.transform(psMat.scale(half_width / nerd_glyph.width, 1))
+            # グリフの高さ・位置を調整する
+            nerd_glyph.transform(psMat.scale(1, 1.14))
+            nerd_glyph.transform(psMat.translate(0, 21))
+        elif nerd_glyph.width < (EM_ASCENT + EM_DESCENT) * 0.6:
+            # 幅が狭いグリフは中央寄せとみなして調整する
+            nerd_glyph.transform(
+                psMat.translate((half_width - nerd_glyph.width) / 2, 0)
+            )
+        # 幅を設定
+        nerd_glyph.width = half_width
+
     # 日本語フォントにマージするため、既に存在する場合は削除する
     for nerd_glyph in nerd_font.glyphs():
         if nerd_glyph.unicode != -1:
@@ -1072,6 +1078,8 @@ def add_nerd_font_glyphs(jp_font, eng_font):
                 pass
 
     jp_font.mergeFonts(nerd_font)
+    # mergeFonts 後、nerd_font は jp_font に統合されるため、明示的に閉じる必要はない
+    # (閉じるとエラーが発生する可能性がある)
 
     jp_font.selection.none()
     eng_font.selection.none()
