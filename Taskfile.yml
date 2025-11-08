@@ -98,6 +98,82 @@ tasks:
       - echo "✅ {{.VARIANT}} 변형 처리 완료"
 
   # ============================================
+  # Nerd Fonts 패치
+  # ============================================
+
+  patch:nerd:
+    desc: PlemolKRConsole 폰트에 Nerd Fonts 패치 → PlemolKRConsole
+    silent: true
+    cmds:
+      - mkdir -p build/nerd
+      - |
+        for font in build/PlemolKRConsole-*.ttf; do
+          if [ ! -f "$font" ]; then
+            echo "❌ PlemolKRConsole 폰트가 없습니다. 먼저 빌드를 실행하세요."
+            exit 1
+          fi
+          variation=$(basename "$font" .ttf | sed 's/PlemolKRConsole-//')
+          echo "🔧 패치 중: $font → PlemolKRConsole-$variation.ttf"
+          mkdir -p build/nerd/tmp
+          fontforge --script FontPatcher/font-patcher \
+            --complete --careful --mono \
+            --outputdir build/nerd/tmp \
+            "$font" 2>&1 | grep -v "^Copyright" | grep -v "^$" || true
+          # 생성된 파일을 원하는 이름으로 변경
+          mv build/nerd/tmp/*.ttf "build/nerd/PlemolKRConsole-$variation.ttf" 2>/dev/null || \
+            echo "⚠️  $variation 처리 중 오류 발생"
+          rm -rf build/nerd/tmp
+        done
+      - echo ""
+      - echo "✅ Nerd Fonts 패치 완료 (PlemolKRConsole)"
+      - ls -lh build/nerd/PlemolKRConsole-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
+
+  patch:nerd:wide:
+    desc: PlemolKR35Console 폰트에 Nerd Fonts 패치 → PlemolKR35Console
+    silent: true
+    cmds:
+      - mkdir -p build/nerd
+      - |
+        for font in build/PlemolKR35Console-*.ttf; do
+          if [ ! -f "$font" ]; then
+            echo "❌ PlemolKR35Console 폰트가 없습니다. 먼저 빌드를 실행하세요."
+            exit 1
+          fi
+          variation=$(basename "$font" .ttf | sed 's/PlemolKR35Console-//')
+          echo "🔧 패치 중: $font → PlemolKR35Console-$variation.ttf"
+          mkdir -p build/nerd/tmp
+          fontforge --script FontPatcher/font-patcher \
+            --complete --careful --mono \
+            --outputdir build/nerd/tmp \
+            "$font" 2>&1 | grep -v "^Copyright" | grep -v "^$" || true
+          # 생성된 파일을 원하는 이름으로 변경
+          mv build/nerd/tmp/*.ttf "build/nerd/PlemolKR35Console-$variation.ttf" 2>/dev/null || \
+            echo "⚠️  $variation 처리 중 오류 발생"
+          rm -rf build/nerd/tmp
+        done
+      - echo ""
+      - echo "✅ Nerd Fonts 패치 완료 (PlemolKR35Console)"
+      - ls -lh build/nerd/PlemolKR35Console-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
+
+  patch:nerd:all:
+    desc: 모든 Console 폰트에 Nerd Fonts 패치 (PlemolKRConsole + PlemolKR35Console)
+    cmds:
+      - echo "🚀 전체 Nerd Fonts 패치 시작..."
+      - task patch:nerd
+      - task patch:nerd:wide
+      - echo ""
+      - echo "✅ 전체 Nerd Fonts 패치 완료!"
+      - echo ""
+      - echo "📊 생성된 폰트 목록:"
+      - ls -lh build/nerd/*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
+
+  clean:nerd:
+    desc: 패치된 Nerd Fonts 폰트 정리
+    cmds:
+      - rm -rf build/nerd
+      - echo "✅ Nerd Fonts 폰트 정리 완료"
+
+  # ============================================
   # 전체 빌드 워크플로우
   # ============================================
 
