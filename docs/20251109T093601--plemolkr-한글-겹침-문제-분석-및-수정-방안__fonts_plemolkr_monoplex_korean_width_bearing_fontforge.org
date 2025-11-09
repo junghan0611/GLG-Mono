@@ -512,21 +512,47 @@ def test_korean_glyph_bearing():
 - [X] Quick build로 검증
 - [X] Bearing 검증 완료 (LSB = RSB)
 
-** Phase 3: 검증 및 테스트 (진행 중)
-- [ ] Console 버전 전체 빌드 (32개 폰트)
-  - PlemolKRConsole (16 fonts: 8 weights × 2 styles)
-  - PlemolKR35Console (16 fonts: 8 weights × 2 styles)
-- [ ] Linux + Emacs 환경 테스트
+** Phase 3: 검증 및 테스트 (완료)
+- [X] Console 버전 전체 빌드 (32개 폰트)
+  - PlemolKRConsole (16 fonts: 8 weights × 2 styles) ✓
+  - PlemolKR35Console (16 fonts: 8 weights × 2 styles) ✓
+- [X] Bearing 검증 완료
+  - PlemolKRConsole: LSB = RSB (완벽 중앙 정렬) ✓
+  - PlemolKR35Console: LSB = RSB (완벽 중앙 정렬) ✓
+- [X] NixOS 25.05 빌드 환경 구축
+  - Python 3.12 + FontForge + ttfautohint 1.8.3
+  - 자동화 스크립트: build_console_all.sh
+- [ ] Linux + Emacs 환경 테스트 (다음)
 - [ ] 시각적 비교 문서 작성
 
 *참고*: 공식 릴리즈는 Console 버전만 제공
 - 이유: 프로그래밍/CLI 환경 최적화, Nerd Fonts 호환성
 
-** Phase 4: PR 제출
+*빌드 결과 (2025-11-09)*:
+- 빌드 시간: 5분 47초 (전체 32개 폰트)
+- 검증 결과: 한글 글리프 bearing 완벽 중앙 정렬
+- 파일명: PlemolKRConsole-*.ttf, PlemolKR35Console-*.ttf
+
+** Phase 4: Taskfile.yml 방식 전환 및 재검증 (진행 중)
+- [ ] go-task 설치 (nix-env -iA nixpkgs.go-task)
+- [ ] Taskfile.yml로 빌드 전환
+  - task build:console (1:2 ratio)
+  - task build:console35 (3:5 ratio)
+  - task polish (fonttools 후처리)
+- [ ] Nerd Fonts 통합 검증
+  - Taskfile의 patch:nerd 태스크 확인
+  - FontPatcher 방식 vs 내장 빌드 비교
+- [ ] 전체 빌드 재검증
+  - bearing 재확인
+  - 파일명 규칙 확인
+  - 메타데이터 검증
+
+** Phase 5: PR 제출 준비
 - [ ] 코드 리뷰 준비
-- [ ] 커밋 메시지 작성
+- [ ] 커밋 메시지 정리
 - [ ] PR 설명 작성
 - [ ] Before/After 스크린샷 첨부
+- [ ] Emacs 실제 테스트
 
 * 참고자료 :REFERENCES:
 
@@ -573,6 +599,179 @@ def test_korean_glyph_bearing():
 - TUI 환경에서 최적의 한글 폰트 경험
 - 향후 유니코드 확장 시 안정적인 기반 확보
 
+* 구현 세부사항 :IMPLEMENTATION:
+
+** 수정된 파일 목록
+
+*** fontforge_script.py
+*수정 위치*: transform_half_width() 함수 (라인 792-808)
+
+#+BEGIN_SRC python
+def transform_half_width(jp_font, eng_font):
+    """Transform to 1:2 width ratio"""
+    after_width_eng = HALF_WIDTH_12  # 528
+
+    for glyph in jp_font.glyphs():
+        if glyph.width == 600:
+            # Half-width: same width as alphanumeric glyphs
+            glyph.transform(psMat.translate((after_width_eng - glyph.width) / 2, 0))
+            glyph.width = after_width_eng
+        elif glyph.width == 1000:
+            # Full-width: double the half-width (with proper bearing adjustment)
+            target_width = after_width_eng * 2  # 1056
+            bbox = glyph.boundingBox()
+            # Calculate actual glyph width
+            actual_width = bbox[2] - bbox[0]
+            # Center alignment: calculate offset to make left and right bearings equal
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
+#+END_SRC
+
+*수정 위치*: adjust_width_35_jp() 함수 (라인 757-776)
+
+#+BEGIN_SRC python
+def adjust_width_35_jp(jp_font):
+    """日本語フォントを半角3:全角5幅になるように変換する"""
+    after_width = int(FULL_WIDTH_35 * 3 / 5)
+    jp_half_width = jp_font[0x3000].width / 2
+    jp_full_width = jp_font[0x3000].width
+    for glyph in jp_font.glyphs():
+        if glyph.width == jp_half_width:
+            glyph.transform(psMat.translate((after_width - glyph.width) / 2, 0))
+            glyph.width = after_width
+        elif glyph.width == jp_full_width:
+            # Full-width: apply proper bearing adjustment for center alignment
+            target_width = FULL_WIDTH_35  # 1000
+            bbox = glyph.boundingBox()
+            actual_width = bbox[2] - bbox[0]
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
+#+END_SRC
+
+*추가 수정*:
+- 라인 544: glyph 복사 로그를 stderr로 리다이렉트
+
+*** fonttools_script.py
+*수정 위치*: add_hinting() 함수 (라인 101-105)
+
+#+BEGIN_SRC python
+options_ = options.parse_args(args)
+# Remove epoch option for ttfautohint 1.8.3/1.8.4 compatibility
+if hasattr(options_, 'epoch'):
+    delattr(options_, 'epoch')
+ttfautohint(**options_)
+#+END_SRC
+
+*** build.ini
+*수정 위치*: 라인 14
+
+#+BEGIN_SRC ini
+# Before: IDEOGRAPHIC_SPACE = AdjustedGlyphs/ideographic_space.sfd
+# After:
+IDEOGRAPHIC_SPACE = AdjustedGlyphs/Ideographic_Space.sfd
+#+END_SRC
+
+*이유*: Linux 파일시스템 대소문자 구분
+
+*** shell.nix (NEW)
+*목적*: NixOS 25.05 재현 가능한 빌드 환경
+
+#+BEGIN_SRC nix
+let
+  nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05.tar.gz";
+  pkgs = import nixpkgs {};
+in
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    fontforge
+    python312
+    python312Packages.fonttools
+    python312Packages.ttfautohint-py
+    ttfautohint
+    go-task
+    git
+    fontconfig
+  ];
+}
+#+END_SRC
+
+*** build_console_all.sh (NEW)
+*목적*: Console 변형 자동 빌드
+
+#+BEGIN_SRC bash
+#!/usr/bin/env bash
+# Usage: ./build_console_all.sh [--zip]
+
+# Stage 1: FontForge
+nix-shell --run "python3 fontforge_script.py --console" 2>"$BUILD_LOG"
+nix-shell --run "python3 fontforge_script.py --console --35 --do-not-delete-build-dir" 2>>"$BUILD_LOG"
+
+# Stage 2: FontTools
+nix-shell --run "python3 fonttools_script.py" 2>>"$BUILD_LOG"
+
+# Optional: Create zip archives
+if [ "$CREATE_ZIP" = true ]; then
+    zip -q "PlemolKRConsole_${VERSION}.zip" PlemolKRConsole-*.ttf
+    zip -q "PlemolKR35Console_${VERSION}.zip" PlemolKR35Console-*.ttf
+fi
+#+END_SRC
+
+** 커밋 히스토리
+
+#+BEGIN_EXAMPLE
+52057a0 Fix Korean glyph overlap issue in Linux/Emacs environment
+0f6f5b1 docs: Update build policy to Console-only variants
+297452c build: Add complete build environment and automation script
+bf68fcd build: Redirect verbose logs to build.log file
+40dadb5 fix: Remove epoch option and redirect glyph logs to stderr
+76caf66 feat: Add zip archive option and fix epoch removal
+1640feb fix: Apply bearing adjustment to 3:5 ratio (PlemolKR35Console)
+#+END_EXAMPLE
+
+** 빌드 환경 요구사항
+
+*** 필수 도구
+- FontForge 20230101 (Python bindings)
+- Python 3.12+
+- fontTools 4.56.0+
+- ttfautohint 1.8.3+
+- go-task 3.43.3+ (Taskfile 방식)
+
+*** NixOS 환경 (권장)
+#+BEGIN_SRC bash
+nix-shell  # shell.nix 사용
+#+END_SRC
+
+*** 일반 환경
+#+BEGIN_SRC bash
+pip install fonttools ttfautohint-py
+# FontForge는 시스템 패키지 매니저로 설치
+#+END_SRC
+
+** 다음 단계
+
+1. *Taskfile.yml 전환*
+   - go-task 설치: =nix-env -iA nixpkgs.go-task=
+   - 빌드: =task build:console && task build:console35 && task polish=
+   - Nerd Fonts: =task patch:nerd:all=
+
+2. *재검증*
+   - bearing 재확인
+   - Nerd Fonts 통합 테스트
+   - 파일명 및 메타데이터 확인
+
+3. *Emacs 테스트*
+   - 설치: =cp build/PlemolKRConsole-*.ttf ~/.local/share/fonts/=
+   - 캐시 갱신: =fc-cache -fv=
+   - Before/After 스크린샷
+
+4. *PR 준비*
+   - 커밋 메시지 정리
+   - PR 설명 작성
+   - 스크린샷 첨부
+
 ---
 
 본 문서는 PlemolKR 폰트 개선 프로젝트의 기술 분석 문서입니다.
@@ -583,4 +782,5 @@ Repository: /home/goqual/repos/gh/PlemolKR
 Branch: fix/korean-overlap
 Date: 2025-11-09
 Analyzer: Claude Code + junghanacs
+Last Update: Phase 3 완료, Phase 4 (Taskfile 전환) 준비 중
 #+END_EXAMPLE
