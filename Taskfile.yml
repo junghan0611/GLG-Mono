@@ -1,9 +1,14 @@
+# GLG-Mono Font Build System
 # https://taskfile.dev
+#
+# This build system is derived from PlemolKR by soomtong
+# Copyright (c) 2025 soomtong
+# Copyright (c) 2025 Junghan Kim (junghan0611)
 
 version: '3'
 
 vars:
-  GREETING: "PlemolKR Font Build System"
+  GREETING: "GLG-Mono Font Build System"
   VERSION:
     sh: grep "VERSION" build.ini | cut -d "=" -f 2 | tr -d " "
 
@@ -102,61 +107,61 @@ tasks:
   # ============================================
 
   patch:nerd:
-    desc: PlemolKRConsole 폰트에 Nerd Fonts 패치 → PlemolKRConsole
+    desc: GLG-MonoConsole 폰트에 Nerd Fonts 패치 → GLG-MonoConsole
     silent: true
     cmds:
       - mkdir -p build/nerd
       - |
-        for font in build/PlemolKRConsole-*.ttf; do
+        for font in build/GLG-MonoConsole-*.ttf; do
           if [ ! -f "$font" ]; then
-            echo "❌ PlemolKRConsole 폰트가 없습니다. 먼저 빌드를 실행하세요."
+            echo "❌ GLG-MonoConsole 폰트가 없습니다. 먼저 빌드를 실행하세요."
             exit 1
           fi
-          variation=$(basename "$font" .ttf | sed 's/PlemolKRConsole-//')
-          echo "🔧 패치 중: $font → PlemolKRConsole-$variation.ttf"
+          variation=$(basename "$font" .ttf | sed 's/GLG-MonoConsole-//')
+          echo "🔧 패치 중: $font → GLG-MonoConsole-$variation.ttf"
           mkdir -p build/nerd/tmp
           fontforge --script FontPatcher/font-patcher \
             --complete --careful --mono \
             --outputdir build/nerd/tmp \
             "$font" 2>&1 | grep -v "^Copyright" | grep -v "^$" || true
           # 생성된 파일을 원하는 이름으로 변경
-          mv build/nerd/tmp/*.ttf "build/nerd/PlemolKRConsole-$variation.ttf" 2>/dev/null || \
+          mv build/nerd/tmp/*.ttf "build/nerd/GLG-MonoConsole-$variation.ttf" 2>/dev/null || \
             echo "⚠️  $variation 처리 중 오류 발생"
           rm -rf build/nerd/tmp
         done
       - echo ""
-      - echo "✅ Nerd Fonts 패치 완료 (PlemolKRConsole)"
-      - ls -lh build/nerd/PlemolKRConsole-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
+      - echo "✅ Nerd Fonts 패치 완료 (GLG-MonoConsole)"
+      - ls -lh build/nerd/GLG-MonoConsole-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
 
   patch:nerd:wide:
-    desc: PlemolKR35Console 폰트에 Nerd Fonts 패치 → PlemolKR35Console
+    desc: GLG-Mono35Console 폰트에 Nerd Fonts 패치 → GLG-Mono35Console
     silent: true
     cmds:
       - mkdir -p build/nerd
       - |
-        for font in build/PlemolKR35Console-*.ttf; do
+        for font in build/GLG-Mono35Console-*.ttf; do
           if [ ! -f "$font" ]; then
-            echo "❌ PlemolKR35Console 폰트가 없습니다. 먼저 빌드를 실행하세요."
+            echo "❌ GLG-Mono35Console 폰트가 없습니다. 먼저 빌드를 실행하세요."
             exit 1
           fi
-          variation=$(basename "$font" .ttf | sed 's/PlemolKR35Console-//')
-          echo "🔧 패치 중: $font → PlemolKR35Console-$variation.ttf"
+          variation=$(basename "$font" .ttf | sed 's/GLG-Mono35Console-//')
+          echo "🔧 패치 중: $font → GLG-Mono35Console-$variation.ttf"
           mkdir -p build/nerd/tmp
           fontforge --script FontPatcher/font-patcher \
             --complete --careful --mono \
             --outputdir build/nerd/tmp \
             "$font" 2>&1 | grep -v "^Copyright" | grep -v "^$" || true
           # 생성된 파일을 원하는 이름으로 변경
-          mv build/nerd/tmp/*.ttf "build/nerd/PlemolKR35Console-$variation.ttf" 2>/dev/null || \
+          mv build/nerd/tmp/*.ttf "build/nerd/GLG-Mono35Console-$variation.ttf" 2>/dev/null || \
             echo "⚠️  $variation 처리 중 오류 발생"
           rm -rf build/nerd/tmp
         done
       - echo ""
-      - echo "✅ Nerd Fonts 패치 완료 (PlemolKR35Console)"
-      - ls -lh build/nerd/PlemolKR35Console-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
+      - echo "✅ Nerd Fonts 패치 완료 (GLG-Mono35Console)"
+      - ls -lh build/nerd/GLG-Mono35Console-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
 
   patch:nerd:all:
-    desc: 모든 Console 폰트에 Nerd Fonts 패치 (PlemolKRConsole + PlemolKR35Console)
+    desc: 모든 Console 폰트에 Nerd Fonts 패치 (GLG-MonoConsole + GLG-Mono35Console)
     cmds:
       - echo "🚀 전체 Nerd Fonts 패치 시작..."
       - task patch:nerd
@@ -186,7 +191,7 @@ tasks:
       - task build:35
       - task polish
       - echo "✅ 전체 빌드 완료!"
-      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools
+      - ls -lh build/GLG-Mono*.ttf | grep -v fontforge | grep -v fonttools
 
   full:all:
     desc: 모든 변형 빌드 (기본 + 3:5 + 콘솔)
@@ -199,7 +204,7 @@ tasks:
       - task build:console35
       - task polish
       - echo "✅ 모든 변형 빌드 완료!"
-      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools
+      - ls -lh build/GLG-Mono*.ttf | grep -v fontforge | grep -v fonttools
 
   full:nerd:
     desc: Nerd Fonts 포함 전체 빌드
@@ -210,7 +215,7 @@ tasks:
       - task build:console-nf35
       - task polish
       - echo "✅ Nerd Fonts 전체 빌드 완료!"
-      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools
+      - ls -lh build/GLG-Mono*.ttf | grep -v fontforge | grep -v fonttools
 
   # ============================================
   # 빠른 빌드 (디버그)
@@ -221,7 +226,7 @@ tasks:
     cmds:
       - python fontforge_script.py --debug
       - python fonttools_script.py
-      - ls -lh build/PlemolKR-Regular.ttf
+      - ls -lh build/GLG-Mono-Regular.ttf
       - echo "✅ 빠른 빌드 완료 (Regular만)"
 
   quick:35:
@@ -229,7 +234,7 @@ tasks:
     cmds:
       - python fontforge_script.py --debug --35
       - python fonttools_script.py 35
-      - ls -lh build/PlemolKR35-Regular.ttf
+      - ls -lh build/GLG-Mono35-Regular.ttf
       - echo "✅ 빠른 빌드 완료 (3:5, Regular만)"
 
   quick:nerd:
@@ -243,7 +248,7 @@ tasks:
       - echo "✅ 빠른 Nerd Fonts 빌드 완료!"
       - echo ""
       - echo "📊 생성된 폰트 목록:"
-      - ls -lh build/PlemolKRConsoleNF-*.ttf build/PlemolKRConsoleNF35-*.ttf 2>/dev/null || echo "폰트를 찾을 수 없습니다"
+      - ls -lh build/GLG-MonoConsoleNF-*.ttf build/GLG-MonoConsoleNF35-*.ttf 2>/dev/null || echo "폰트를 찾을 수 없습니다"
 
   # ============================================
   # 유틸리티 태스크
@@ -260,10 +265,10 @@ tasks:
     desc: 생성된 폰트 파일 확인
     cmds:
       - echo "📊 생성된 폰트 파일 목록:"
-      - ls -lh build/PlemolKR*.ttf | grep -v fontforge | grep -v fonttools || echo "폰트 파일이 없습니다."
+      - ls -lh build/GLG-Mono*.ttf | grep -v fontforge | grep -v fonttools || echo "폰트 파일이 없습니다."
       - echo ""
       - echo "📈 글리프 수 확인:"
-      - python work_scripts/check_glyph_number.py build/PlemolKR-Regular.ttf 2>/dev/null || echo "Regular 폰트를 찾을 수 없습니다."
+      - python work_scripts/check_glyph_number.py build/GLG-Mono-Regular.ttf 2>/dev/null || echo "Regular 폰트를 찾을 수 없습니다."
 
   verify:
     desc: 한글/일본어/이모지 문자 확인
@@ -271,7 +276,7 @@ tasks:
       - |
         python3 -c "
         import fontforge
-        font = fontforge.open('build/PlemolKR-Regular.ttf')
+        font = fontforge.open('build/GLG-Mono-Regular.ttf')
         korean = [(0xAC00, '가'), (0xD7A3, '힣')]
         japanese = [(0x3042, 'あ'), (0x30A2, 'ア')]
         emoji = [
@@ -384,7 +389,7 @@ tasks:
   install:
     desc: 폰트를 시스템에 설치 (macOS)
     cmds:
-      - cp build/PlemolKR-*.ttf ~/Library/Fonts/
+      - cp build/GLG-Mono-*.ttf ~/Library/Fonts/
       - echo "✅ 폰트 설치 완료 (~/Library/Fonts/)"
 
   # ============================================
@@ -398,7 +403,7 @@ tasks:
         sh: date +%Y%m%d%H%M%S
     cmds:
       - mkdir -p release_files/build_{{.TIMESTAMP}}
-      - cp build/PlemolKR*.ttf release_files/build_{{.TIMESTAMP}}/ 2>/dev/null || true
+      - cp build/GLG-Mono*.ttf release_files/build_{{.TIMESTAMP}}/ 2>/dev/null || true
       - echo "✅ 릴리스 파일 준비 완료 release_files/build_{{.TIMESTAMP}}/"
       - ls -lh release_files/build_{{.TIMESTAMP}}/
 
@@ -409,7 +414,7 @@ tasks:
   info:
     desc: 빌드 환경 정보 표시
     cmds:
-      - echo "📦 PlemolKR 빌드 시스템"
+      - echo "📦 GLG-Mono 빌드 시스템"
       - echo "버전{{"{{"}} .VERSION {{"}}"}}"
       - echo ""
       - echo "🐍 Python 버전:"
