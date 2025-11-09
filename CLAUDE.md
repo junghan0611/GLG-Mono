@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 코딩 지침
+- 주석은 영어로 작성 한다.
+
 ## Project Overview
 
 **PlemolKR** is a Korean programming font that merges IBM Plex Mono (English monospace) with IBM Plex Sans KR (Korean) to create a comprehensive programming font. This is a fork of the PlemolJP project, adapted for Korean language support.
@@ -409,4 +412,3 @@ task verify             # Check Korean/Japanese character presence
 - Don't forget `--do-not-delete-build-dir` when building multiple variants
 - Stage 2 (fonttools) must run after Stage 1 (fontforge)
 - Italic variants are generated algorithmically (9° skew), not from source files
-

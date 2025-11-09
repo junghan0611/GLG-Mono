@@ -791,13 +791,21 @@ def transform_half_width(jp_font, eng_font):
 
     for glyph in jp_font.glyphs():
         if glyph.width == 600:
-            # 英数字グリフと同じ幅にする
+            # Half-width: same width as alphanumeric glyphs
             glyph.transform(psMat.translate((after_width_eng - glyph.width) / 2, 0))
             glyph.width = after_width_eng
         elif glyph.width == 1000:
-            # 全角は after_width_eng の倍の幅にする
-            glyph.transform(psMat.translate((after_width_eng * 2 - glyph.width) / 2, 0))
-            glyph.width = after_width_eng * 2
+            # Full-width: double the half-width (with proper bearing adjustment)
+            target_width = after_width_eng * 2  # 1056
+            bbox = glyph.boundingBox()
+            # bbox: (xmin, ymin, xmax, ymax)
+            # Calculate actual glyph width
+            actual_width = bbox[2] - bbox[0]
+            # Center alignment: calculate offset to make left and right bearings equal
+            # This achieves the same effect as CenterInWidth()
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
 
 
 def make_box_drawing_full_width(eng_font, jp_font):
