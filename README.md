@@ -1,39 +1,210 @@
-# PlemolJP (プレモル ジェイピー)
+# GLG-Mono
 
-***Ple***x ***Mo***no ***L***anguage ***JP***
+> **Hih's Monospace Font for 8-Layer Ecosystem**
 
-IBM Plex Mono と IBM Plex Sans JP を合成した日本語プログラミングフォント PlemolJP (プレモル ジェイピー)
+GLG-Mono is a Korean programming font designed for knowledge management and AI collaboration. It merges IBM Plex Mono (English) with IBM Plex Sans KR (Korean) to provide comprehensive Unicode support in terminals and editors.
 
-**ダウンロードはこちら ➡ [Releases](https://github.com/yuru7/PlemolJP/releases/latest)**
+[한글 문서](README-KO.md) | [Philosophy](docs/PHILOSOPHY.org)
 
-> 💡 [Homebrew (Mac) でのインストール方法](doc/install_via_homebrew.md)
+## Name Origin
 
-![image](https://github.com/yuru7/PlemolJP/raw/images/beer.jpg)
+### 힣 (U+D7A3) - Hangul Syllable Hih
+- The last syllable in Korean Unicode
+- Philosophical meaning: "Letting go of ego" - writing without self
+- Technical meaning: End boundary of regex `[가-힣]`
 
-PlemolJP では合成元の [IBM Plex Mono](https://github.com/IBM/plex) シリーズと同様に、ノーマル・イタリックの両スタイルに対応しました。また、各スタイルごとに8種のウェイト (Thin~Bold) をご用意しています。  
+### GLG - Giggling Language Glyph
+- "힣" typed on QWERTY keyboard = "glg"
+- English meaning: "giggling" - coding with a smile
+- "힣 for everyone" - joyful writing for all
 
-さらに日本語環境でのプログラミングでつまずきがちな全角スペースの誤入力に気づけるよう、全角スペースを可視化する修正を加えています。  
+For deeper philosophy and background, see [`docs/PHILOSOPHY.org`](docs/PHILOSOPHY.org).
 
-> 💡 全角スペースの可視化が不要な場合は、リリースの Assets より `PlemolJP_HS_vx.x.x.zip` の名前形式になっている zip ファイルを選択してください。(HS: Hidden Space)
+## Key Features
 
-> 💡 Powerline 記号等が含まれる Nerd Fonts 対応版は、リリースの Assets より `PlemolJP_NF_vx.x.x.zip` の名前形式になっている zip ファイルを選択してください。(NF: Nerd Fonts)
+### 1. Unicode Completeness
+- **87% → 100% Coverage**: All symbols needed for knowledge management
+- **Denote File Naming**: Perfect support for metadata-rich filenames
+  ```
+  § ¶ † ‡ № ⓕ ↔ → ⊢ ∉ © ¬ ¢ ¤ µ ¥ £ ¡ ¿
+  ```
+- **Programming Ligatures**: cashpw-style Unicode ligatures
+  ```
+  λ ƒ ∘ ∅ ℤ ℝ 𝔹 𝕥 𝕗 ∈ ∉ ∧ ∨ ∀ ∃
+  ```
+- **Math & Logic Symbols**: Type systems, functional programming, logic operations
+- **Ancient Korean**: ㅹ ㆅ ㅺ ㉼ ㉽
+- **CJK Brackets**: 『』 《》 〈〉 ｢｣
 
-|**フォント ファミリー**|**説明**|
-|:------------:|:---|
-|**PlemolJP**|文字幅比率「半角1:全角2」の通常版の PlemolJP。主にASCIIコードの英数字記号に IBM Plex Mono の字体を使い、その他の日本語文字や記号類に IBM Plex Sans JP を使っている。|
-|**PlemolJP Console**|IBM Plex Mono の字体を除外せずに全て適用したフォントファミリー。矢印記号などの多くの記号が半角で表示されるため、コンソールでの利用や記号類は可能な限り半角で表示したい人にオススメ。|
-|**PlemolJP35**|通常版の PlemolJP の文字幅比率を「半角3:全角5」にしたフォントファミリー。英数字が通常版の PlemolJP よりも大きく表示される。日本語が少ない文書やコードの場合にはこちらの方が読みやすいと感じるかもしれない。|
-|**PlemolJP35 Console**|PlemolJP Console の文字幅比率を 半角3:全角5 にしたフォントファミリー|
+### 2. 8-Layer Ecosystem Integration
+GLG-Mono serves as the foundational typography across a multi-layered knowledge system:
 
-> 💡 その他、公開中のプログラミングフォント
-> - 日本語文字に源柔ゴシック、英数字部分に Hack を使った [**白源 (はくげん／HackGen)**](https://github.com/yuru7/HackGen)
-> - 日本語文字に源真ゴシック、英数字部分に Fira Mono を使った [**Firge (ファージ)**](https://github.com/yuru7/Firge)
-> - 日本語文字にBIZ UDゴシック、英数字部分に JetBrains Mono を使った [**UDEV Gothic**](https://github.com/yuru7/udev-gothic)
+```
+Layer 7: Knowledge Publishing  → Digital Garden (notes.junghanacs.com)
+Layer 6: Agent Orchestration   → meta-config
+Layer 5a: Migration            → memex-kb
+Layer 5b: Life Timeline        → memacs-config
+Layer 4: AI Memory             → claude-config (PARA + Denote)
+Layer 3: Knowledge Management  → Org-mode 1,400+ files + Zotero 156k+ lines
+Layer 2: Development           → doomemacs-config
+Layer 1: Infrastructure        → nixos-config
+```
 
-|Thin|ExtraLight|Light|Regular|
-|:---:|:---:|:---:|:---:|
-|![Thin](https://user-images.githubusercontent.com/13458509/133928702-21f1f391-e83a-4825-9059-36cf3d35f6f7.png)|![ExtraLight](https://user-images.githubusercontent.com/13458509/133928717-f5e17c66-b4e1-47fe-950f-ca3bc574a874.png)|![Light](https://user-images.githubusercontent.com/13458509/133928734-3ca98395-97b9-417b-96a1-ef83f614739a.png)|![Regular](https://user-images.githubusercontent.com/13458509/133928745-fe85ba2e-0d5e-406c-9d23-c832e11bc7b4.png)|
+Provides consistent typography across all layers with a single font.
 
-|Text|Medium|SemiBold|Bold|
-|:---:|:---:|:---:|:---:|
-|![Text](https://user-images.githubusercontent.com/13458509/133928757-af5b6b82-5e1f-41bb-a925-f03769bdad00.png)|![Medium](https://user-images.githubusercontent.com/13458509/133928766-a4b22651-cc1c-48d7-b729-15a6a4070f44.png)|![SemiBold](https://user-images.githubusercontent.com/13458509/133928774-d8467d02-c301-4bef-84e5-1702f9f9645d.png)|![Bold](https://user-images.githubusercontent.com/13458509/133928784-7cc5f571-1161-41de-81b8-b97573e3f524.png)|
+### 3. TUI Terminal Optimization
+- **Single-Font Completeness**: Terminals have limited font fallback (unlike Emacs)
+- **AI Agent Collaboration**: Optimized for terminal-based AI tools (Claude Code, etc.)
+- **Console Mode**: Half-width display for arrows and other symbols
+- **Nerd Fonts Support**: Powerline symbols, devicons, and dev icons
+
+### 4. Technical Differentiation
+- **Korean Glyph Bearing Fix**: Precise rendering without overlap (LSB/RSB 0-2px)
+- **Web Font Support**: WOFF2 format for Digital Garden integration
+- **Full Set by Default**: Includes Normal, Console, 35, 35Console variants
+- **8 Weights**: Thin ~ Bold, each in Regular/Italic styles
+
+## Font Families
+
+| Font Family | Width Ratio | Description |
+|------------|-------------|-------------|
+| **GLG-Mono** | Half 1:Full 2 | Standard version. IBM Plex Mono for ASCII, IBM Plex Sans for Korean/Japanese |
+| **GLG-Mono Console** | Half 1:Full 2 | Console-optimized. Half-width symbols (arrows, etc.). Recommended for terminals |
+| **GLG-Mono 35** | Half 3:Full 5 | Larger ASCII version. Better for English-heavy code |
+| **GLG-Mono 35 Console** | Half 3:Full 5 | Combines 35 ratio with Console mode |
+
+### Optional Variants
+- **NF** suffix: Includes Nerd Fonts (e.g., GLG-MonoConsoleNF)
+- **HS** suffix: Hidden full-width Space (disables visualization)
+
+Each family provides 16 files (8 weights × 2 styles).
+
+## Download & Installation
+
+### Download from Releases
+Select your preferred variant from the Assets section of the release page:
+
+- `GLG-Mono_vx.x.x.zip` - Standard version
+- `GLG-Mono_NF_vx.x.x.zip` - With Nerd Fonts
+- `GLG-Mono_HS_vx.x.x.zip` - Hidden full-width space
+
+### Installation
+
+**Linux:**
+```bash
+mkdir -p ~/.local/share/fonts/GLG-Mono
+unzip GLG-Mono_*.zip -d ~/.local/share/fonts/GLG-Mono
+fc-cache -fv
+```
+
+**macOS:**
+```bash
+# Method 1: Double-click TTF files in Finder
+# Method 2: Command line
+cp *.ttf ~/Library/Fonts/
+```
+
+**Windows:**
+1. Extract downloaded ZIP file
+2. Select TTF files → Right-click → "Install"
+
+## Building from Source
+
+### Requirements
+- Python 3.x
+- FontForge (with Python bindings)
+- Python packages: `fontTools`, `ttfautohint`
+- Task (optional, recommended): https://taskfile.dev
+
+### Build System
+
+**For NixOS users:**
+```bash
+nix-shell  # Automatically loads all dependencies
+```
+
+**Using Taskfile (recommended):**
+```bash
+# Quick test builds (Regular weight only)
+task quick              # 1:2 ratio
+task quick:35           # 3:5 ratio
+task quick:nerd         # Nerd Fonts
+
+# Full builds (all weights)
+task build              # Standard 1:2
+task build:console      # Console mode
+task build:nf           # Nerd Fonts
+task build:console-nf35 # Console + 3:5 + Nerd Fonts
+
+# Build + post-process (complete fonts)
+task full               # Standard + 35
+task full:all           # All variants
+task full:nerd          # Nerd Fonts variants
+
+# Utilities
+task check              # List built fonts
+task verify             # Verify Korean/Japanese glyphs
+task clean              # Remove build directory
+```
+
+**Direct script execution:**
+```bash
+# Stage 1: FontForge (font merging)
+python fontforge_script.py --debug --console --nerd-font
+
+# Stage 2: FontTools (hinting & finalization)
+python fonttools_script.py
+
+# Check results
+ls -lh build/GLG-Mono*.ttf
+```
+
+See `Taskfile.yml` for detailed build options.
+
+## Project Lineage
+
+```
+IBM Plex (2017, IBM)
+  ├─ IBM Plex Mono (English monospace)
+  ├─ IBM Plex Sans JP (Japanese)
+  └─ IBM Plex Sans KR (Korean)
+    ↓
+PlemolJP (2021, Yuko OTAWARA)
+  - Japanese programming font
+    ↓
+PlemolKR (2024, soomtong)
+  - Korean programming font
+    ↓
+GLG-Mono (2025, junghan0611)
+  - Knowledge management & AI collaboration font
+  - Unicode completeness
+  - 8-Layer ecosystem integration
+```
+
+Thanks to all contributors.
+
+## License
+
+- **Font files**: SIL Open Font License 1.1
+- **Build scripts**: MIT License
+
+See [LICENSE](LICENSE) file for details.
+
+## Related Links
+
+- **Digital Garden**: https://notes.junghanacs.com (힣's Digital Garden)
+- **Project Philosophy**: [docs/PHILOSOPHY.org](docs/PHILOSOPHY.org)
+- **Build Guide**: [docs/BUILD.md](docs/BUILD.md) (coming soon)
+- **PlemolJP**: https://github.com/yuru7/PlemolJP
+- **PlemolKR**: https://github.com/soomtong/PlemolKR
+- **IBM Plex**: https://github.com/IBM/plex
+
+## Contributing
+
+Issues and pull requests are always welcome.
+
+See [`CLAUDE.md`](CLAUDE.md) for project philosophy and coding guidelines.
+
+---
+
+**"힣 for everyone"** - Code with a smile 🙂
