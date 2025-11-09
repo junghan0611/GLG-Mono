@@ -5,3 +5,4 @@ error.log
 build/
 release_files/
 __pycache__/
+*__human.org

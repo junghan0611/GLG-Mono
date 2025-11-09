@@ -1,15 +1,18 @@
-{ pkgs ? import <nixpkgs> {} }:
-
+let
+  # Pin to NixOS 25.05 stable
+  nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05.tar.gz";
+  pkgs = import nixpkgs {};
+in
 pkgs.mkShell {
   buildInputs = with pkgs; [
     # FontForge with Python support
     fontforge
 
-    # Python and required packages
-    python3
-    python3Packages.fonttools
-    python3Packages.ttfautohint-py  # Python bindings for ttfautohint
-    python3Packages.pip
+    # Python 3.12 and required packages
+    python312
+    python312Packages.fonttools
+    python312Packages.ttfautohint-py  # Python bindings for ttfautohint
+    python312Packages.pip
 
     # Font hinting tool (CLI)
     ttfautohint
