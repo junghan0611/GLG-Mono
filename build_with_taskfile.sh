@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# PlemolKR Full Build Script using Taskfile.yml
-# Builds Console variants with Nerd Fonts patches (following soomtong's official build)
+# GLG-Mono Full Build Script using Taskfile.yml
+# Builds Console variants with Nerd Fonts patches
 #
 # Usage:
 #   ./build_with_taskfile.sh [--with-35] [--skip-nerd] [--nerd-only] [--help]
 #
 # Options:
-#   --with-35     Also build PlemolKR35Console (3:5 ratio, adds 16 more fonts)
+#   --with-35     Also build GLG-Mono35Console (3:5 ratio, adds 16 more fonts)
 #   --skip-nerd   Skip Nerd Fonts patching (not recommended for releases)
 #   --nerd-only   Only run Nerd Fonts patching (requires existing fonts)
 #   --help        Show this help message
@@ -16,18 +16,18 @@ set -e  # Exit on error
 # Function to show help
 show_help() {
     cat << 'EOF'
-PlemolKR Build Script (Taskfile.yml wrapper)
+GLG-Mono Build Script (Taskfile.yml wrapper)
 
 USAGE:
     ./build_with_taskfile.sh [OPTIONS]
 
 OPTIONS:
-    --with-35       Build both PlemolKRConsole (1:2) and PlemolKR35Console (3:5)
-                    Default: Only PlemolKRConsole (16 fonts)
+    --with-35       Build both GLG-MonoConsole (1:2) and GLG-Mono35Console (3:5)
+                    Default: Only GLG-MonoConsole (16 fonts)
                     With this: Both variants (32 fonts total)
 
     --skip-nerd     Skip Nerd Fonts patching (faster for testing)
-                    Default: Include Nerd Fonts (soomtong's official build)
+                    Default: Include Nerd Fonts
                     Build time: ~3 minutes vs ~45 minutes
 
     --nerd-only     Only patch existing fonts with Nerd Fonts
@@ -37,7 +37,7 @@ OPTIONS:
     --help          Show this help message
 
 EXAMPLES:
-    # Official release build (PlemolKRConsole + Nerd Fonts, ~45 min)
+    # Official release build (GLG-MonoConsole + Nerd Fonts, ~45 min)
     ./build_with_taskfile.sh
 
     # Full build (both ratios + Nerd Fonts, ~1.5 hours)
@@ -53,14 +53,14 @@ EXAMPLES:
     ./build_with_taskfile.sh --with-35 --skip-nerd
 
 WORKFLOW:
-    1. Release/PR:  ./build_with_taskfile.sh
+    1. Release:     ./build_with_taskfile.sh
     2. Development: ./build_with_taskfile.sh --skip-nerd
     3. Full build:  ./build_with_taskfile.sh --with-35
 
 OUTPUT:
-    build/PlemolKRConsole-*.ttf       - Basic fonts (1:2 ratio)
-    build/PlemolKR35Console-*.ttf     - Wide fonts (3:5 ratio)
-    build/nerd/PlemolKR*Console-*.ttf - Nerd Fonts variants
+    build/GLG-MonoConsole-*.ttf       - Basic fonts (1:2 ratio)
+    build/GLG-Mono35Console-*.ttf     - Wide fonts (3:5 ratio)
+    build/nerd/GLG-Mono*Console-*.ttf - Nerd Fonts variants
 
 REQUIREMENTS:
     - Run inside nix-shell for proper environment
@@ -111,7 +111,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "🚀 PlemolKR Taskfile.yml Build"
+echo "🚀 GLG-Mono Taskfile.yml Build"
 echo "=============================="
 echo ""
 
@@ -146,15 +146,15 @@ if [ "$NERD_ONLY" = false ]; then
     echo "📝 Step 2/4: FontForge (font merging & glyph manipulation)"
     echo "-----------------------------------------------------------"
 
-    echo "Building PlemolKRConsole (1:2 ratio)..."
+    echo "Building GLG-MonoConsole (1:2 ratio)..."
     task build:console
-    echo "✅ PlemolKRConsole fontforge complete"
+    echo "✅ GLG-MonoConsole fontforge complete"
     echo ""
 
     if [ "$BUILD_35" = true ]; then
-        echo "Building PlemolKR35Console (3:5 ratio)..."
+        echo "Building GLG-Mono35Console (3:5 ratio)..."
         task build:console35
-        echo "✅ PlemolKR35Console fontforge complete"
+        echo "✅ GLG-Mono35Console fontforge complete"
         echo ""
     fi
 
@@ -178,17 +178,17 @@ if [ "$NERD_ONLY" = false ]; then
     echo ""
 
     echo "Generated fonts:"
-    ls -lh build/PlemolKR*Console*.ttf 2>/dev/null | grep -v fontforge | grep -v fonttools || echo "No fonts generated yet"
+    ls -lh build/GLG-Mono*Console*.ttf 2>/dev/null | grep -v fontforge | grep -v fonttools || echo "No fonts generated yet"
 
     echo ""
     echo "Font count:"
-    CONSOLE_COUNT=$(ls build/PlemolKRConsole-*.ttf 2>/dev/null | wc -l)
-    CONSOLE35_COUNT=$(ls build/PlemolKR35Console-*.ttf 2>/dev/null | wc -l)
+    CONSOLE_COUNT=$(ls build/GLG-MonoConsole-*.ttf 2>/dev/null | wc -l)
+    CONSOLE35_COUNT=$(ls build/GLG-Mono35Console-*.ttf 2>/dev/null | wc -l)
     TOTAL_COUNT=$((CONSOLE_COUNT + CONSOLE35_COUNT))
 
-    echo "  PlemolKRConsole:   $CONSOLE_COUNT fonts"
+    echo "  GLG-MonoConsole:   $CONSOLE_COUNT fonts"
     if [ "$BUILD_35" = true ]; then
-        echo "  PlemolKR35Console: $CONSOLE35_COUNT fonts"
+        echo "  GLG-Mono35Console: $CONSOLE35_COUNT fonts"
     fi
     echo "  Total:             $TOTAL_COUNT fonts"
     echo ""
@@ -203,7 +203,7 @@ if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
     echo ""
 
     # Check if fonts exist
-    if [ ! -f "build/PlemolKRConsole-Regular.ttf" ]; then
+    if [ ! -f "build/GLG-MonoConsole-Regular.ttf" ]; then
         echo "❌ Error: Base fonts not found. Run without --nerd-only first."
         exit 1
     fi
@@ -215,7 +215,7 @@ if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
         # Run patch with output to both console and log
         task patch:nerd:all 2>&1 | tee nerd_patch.log
     else
-        echo "Starting Nerd Fonts patch for PlemolKRConsole only..."
+        echo "Starting Nerd Fonts patch for GLG-MonoConsole only..."
         echo "(You can monitor progress in another terminal with: tail -f nerd_patch.log)"
         echo ""
         # Run patch for PlemolKRConsole only
@@ -232,13 +232,13 @@ if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
     echo ""
 
     if [ -d "build/nerd" ]; then
-        NERD_CONSOLE_COUNT=$(ls build/nerd/PlemolKRConsole-*.ttf 2>/dev/null | wc -l)
-        NERD_CONSOLE35_COUNT=$(ls build/nerd/PlemolKR35Console-*.ttf 2>/dev/null | wc -l)
+        NERD_CONSOLE_COUNT=$(ls build/nerd/GLG-MonoConsole-*.ttf 2>/dev/null | wc -l)
+        NERD_CONSOLE35_COUNT=$(ls build/nerd/GLG-Mono35Console-*.ttf 2>/dev/null | wc -l)
         NERD_TOTAL_COUNT=$((NERD_CONSOLE_COUNT + NERD_CONSOLE35_COUNT))
 
         echo "Generated Nerd Fonts:"
-        echo "  PlemolKRConsole NF:   $NERD_CONSOLE_COUNT fonts"
-        echo "  PlemolKR35Console NF: $NERD_CONSOLE35_COUNT fonts"
+        echo "  GLG-MonoConsole NF:   $NERD_CONSOLE_COUNT fonts"
+        echo "  GLG-Mono35Console NF: $NERD_CONSOLE35_COUNT fonts"
         echo "  Total:                $NERD_TOTAL_COUNT fonts"
         echo ""
 
@@ -267,14 +267,14 @@ echo ""
 if [ "$NERD_ONLY" = false ]; then
     echo "📁 Output locations:"
     if [ "$BUILD_35" = true ]; then
-        echo "  Basic fonts:  build/PlemolKR*Console-*.ttf (32 fonts)"
+        echo "  Basic fonts:  build/GLG-Mono*Console-*.ttf (32 fonts)"
         if [ "$INCLUDE_NERD" = true ]; then
-            echo "  Nerd Fonts:   build/nerd/PlemolKR*Console-*.ttf (32 fonts)"
+            echo "  Nerd Fonts:   build/nerd/GLG-Mono*Console-*.ttf (32 fonts)"
         fi
     else
-        echo "  Basic fonts:  build/PlemolKRConsole-*.ttf (16 fonts)"
+        echo "  Basic fonts:  build/GLG-MonoConsole-*.ttf (16 fonts)"
         if [ "$INCLUDE_NERD" = true ]; then
-            echo "  Nerd Fonts:   build/nerd/PlemolKRConsole-*.ttf (16 fonts)"
+            echo "  Nerd Fonts:   build/nerd/GLG-MonoConsole-*.ttf (16 fonts)"
         fi
     fi
     echo ""
@@ -284,12 +284,12 @@ echo "📋 Next steps:"
 echo "  1. Verify fonts: task verify"
 if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
     echo "  2. Check Nerd Fonts: task verify:nerd"
-    echo "  3. Test in Emacs: build/nerd/PlemolKRConsole-Regular.ttf"
+    echo "  3. Test in Emacs: build/nerd/GLG-MonoConsole-Regular.ttf"
 else
-    echo "  2. Test in Emacs: build/PlemolKRConsole-Regular.ttf"
+    echo "  2. Test in Emacs: build/GLG-MonoConsole-Regular.ttf"
     echo "  3. (Optional) Add Nerd Fonts: ./build_with_taskfile.sh --nerd-only"
 fi
-echo "  4. Install fonts: cp build/PlemolKR*Console-*.ttf ~/.local/share/fonts/"
+echo "  4. Install fonts: cp build/GLG-Mono*Console-*.ttf ~/.local/share/fonts/"
 echo "  5. Refresh font cache: fc-cache -fv"
 echo ""
 
