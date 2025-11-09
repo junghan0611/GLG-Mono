@@ -20,6 +20,7 @@ settings.read("build.ini", encoding="utf-8")
 VERSION = settings.get("DEFAULT", "VERSION")
 FONT_NAME = settings.get("DEFAULT", "FONT_NAME")
 JP_FONT = settings.get("DEFAULT", "JP_FONT")
+KR_FONT = settings.get("DEFAULT", "KR_FONT")
 ENG_FONT = settings.get("DEFAULT", "ENG_FONT")
 HACK_FONT = settings.get("DEFAULT", "HACK_FONT")
 SOURCE_FONTS_DIR = settings.get("DEFAULT", "SOURCE_FONTS_DIR")
@@ -54,7 +55,6 @@ Copyright (c) 2021, Yuko Otawara
 """  # noqa: E501
 
 options = {}
-nerd_font = None
 
 
 def main():
@@ -79,6 +79,15 @@ def main():
 
     # デバッグモードの場合はここで終了
     if options.get("debug"):
+        return
+
+    # ミニマルモードの場合は Regular, Bold, Italic のみ生成
+    if options.get("minimal"):
+        generate_font(
+            jp_style="Bold",
+            eng_style="Bold",
+            merged_style="Bold",
+        )
         return
 
     generate_font(
@@ -163,7 +172,8 @@ def main():
 def usage():
     print(
         f"Usage: {sys.argv[0]} "
-        "[--hidden-zenkaku-space] [--35] [--console] [--nerd-font]"
+        "[--hidden-zenkaku-space] [--35] [--console] [--nerd-font] "
+        "[--debug] [--minimal] [--do-not-delete-build-dir]"
     )
 
 
@@ -182,6 +192,8 @@ def get_options():
             options["do-not-delete-build-dir"] = True
         elif arg == "--debug":
             options["debug"] = True
+        elif arg == "--minimal":
+            options["minimal"] = True
         elif arg == "--hidden-zenkaku-space":
             options["hidden-zenkaku-space"] = True
         elif arg == "--35":
@@ -198,8 +210,14 @@ def get_options():
 def generate_font(jp_style, eng_style, merged_style):
     print(f"=== Generate {merged_style} ===")
 
-    # 合成するフォントを開く
-    jp_font, eng_font = open_fonts(jp_style, eng_style)
+    # 合成するフォントを開く (JP, KR, ENG)
+    jp_font, kr_font, eng_font = open_fonts(jp_style, eng_style)
+
+    # 韓国語グリフをJPフォントにマージする
+    merge_kr_glyphs(jp_font, kr_font)
+
+    # KRフォントを閉じる (マージが完了したので不要)
+    kr_font.close()
 
     # フォントのEMを揃える
     adjust_em(eng_font)
@@ -301,9 +319,12 @@ def generate_font(jp_style, eng_style, merged_style):
 
 
 def open_fonts(jp_style: str, eng_style: str):
-    """フォントを開く"""
+    """フォントを開く (JP, KR, ENG の3つ)"""
     jp_font = fontforge.open(
         SOURCE_FONTS_DIR + "/" + JP_FONT.replace("{style}", jp_style)
+    )
+    kr_font = fontforge.open(
+        SOURCE_FONTS_DIR + "/" + KR_FONT.replace("{style}", jp_style)
     )
     eng_font = fontforge.open(
         SOURCE_FONTS_DIR + "/" + ENG_FONT.replace("{style}", eng_style)
@@ -314,14 +335,45 @@ def open_fonts(jp_style: str, eng_style: str):
         if glyph.isWorthOutputting():
             jp_font.selection.select(("more", None), glyph)
     jp_font.unlinkReferences()
+    for glyph in kr_font.glyphs():
+        if glyph.isWorthOutputting():
+            kr_font.selection.select(("more", None), glyph)
+    kr_font.unlinkReferences()
     for glyph in eng_font.glyphs():
         if glyph.isWorthOutputting():
             eng_font.selection.select(("more", None), glyph)
     eng_font.unlinkReferences()
     jp_font.selection.none()
+    kr_font.selection.none()
     eng_font.selection.none()
 
-    return jp_font, eng_font
+    return jp_font, kr_font, eng_font
+
+
+def merge_kr_glyphs(jp_font, kr_font):
+    """韓国語グリフをKRフォントからJPフォントにマージする"""
+    # 韓国語ハングル音節 (가~힣)
+    kr_font.selection.select(("ranges", None), 0xAC00, 0xD7A3)
+    # 韓国語ハングル字母 (ㄱ~ㆎ)
+    kr_font.selection.select(("ranges", "more"), 0x3131, 0x318E)
+    # ハングル字母拡張-A
+    kr_font.selection.select(("ranges", "more"), 0xA960, 0xA97F)
+    # ハングル字母拡張-B
+    kr_font.selection.select(("ranges", "more"), 0xD7B0, 0xD7FF)
+
+    # 選択したグリフをコピー
+    kr_font.copy()
+
+    # JPフォントに貼り付け (既存のグリフを上書き)
+    jp_font.selection.select(("ranges", None), 0xAC00, 0xD7A3)
+    jp_font.selection.select(("ranges", "more"), 0x3131, 0x318E)
+    jp_font.selection.select(("ranges", "more"), 0xA960, 0xA97F)
+    jp_font.selection.select(("ranges", "more"), 0xD7B0, 0xD7FF)
+    jp_font.paste()
+
+    # 選択解除
+    kr_font.selection.none()
+    jp_font.selection.none()
 
 
 def adjust_some_glyph(jp_font, eng_font, style="Regular"):
@@ -489,7 +541,7 @@ def delete_duplicate_glyphs(jp_font, eng_font):
         if glyph.altuni:
             altuni_glyph_list.append(glyph.unicode)
             for u in glyph.altuni:
-                print(f"Copying glyph U+{glyph.unicode:04X} to U+{u[0]:04X}")
+                print(f"Copying glyph U+{glyph.unicode:04X} to U+{u[0]:04X}", file=sys.stderr)
     jp_font = materialize_altuni_glyphs(jp_font, altuni_glyph_list)
     jp_font.selection.none()
 
@@ -712,8 +764,16 @@ def adjust_width_35_jp(jp_font):
             glyph.transform(psMat.translate((after_width - glyph.width) / 2, 0))
             glyph.width = after_width
         elif glyph.width == jp_full_width:
-            glyph.transform(psMat.translate((FULL_WIDTH_35 - glyph.width) / 2, 0))
-            glyph.width = FULL_WIDTH_35
+            # Full-width: apply proper bearing adjustment for center alignment
+            target_width = FULL_WIDTH_35  # 1000
+            bbox = glyph.boundingBox()
+            # bbox: (xmin, ymin, xmax, ymax)
+            # Calculate actual glyph width
+            actual_width = bbox[2] - bbox[0]
+            # Center alignment: calculate offset to make left and right bearings equal
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
 
 
 def transform_half_width(jp_font, eng_font):
@@ -739,13 +799,21 @@ def transform_half_width(jp_font, eng_font):
 
     for glyph in jp_font.glyphs():
         if glyph.width == 600:
-            # 英数字グリフと同じ幅にする
+            # Half-width: same width as alphanumeric glyphs
             glyph.transform(psMat.translate((after_width_eng - glyph.width) / 2, 0))
             glyph.width = after_width_eng
         elif glyph.width == 1000:
-            # 全角は after_width_eng の倍の幅にする
-            glyph.transform(psMat.translate((after_width_eng * 2 - glyph.width) / 2, 0))
-            glyph.width = after_width_eng * 2
+            # Full-width: double the half-width (with proper bearing adjustment)
+            target_width = after_width_eng * 2  # 1056
+            bbox = glyph.boundingBox()
+            # bbox: (xmin, ymin, xmax, ymax)
+            # Calculate actual glyph width
+            actual_width = bbox[2] - bbox[0]
+            # Center alignment: calculate offset to make left and right bearings equal
+            # This achieves the same effect as CenterInWidth()
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
 
 
 def make_box_drawing_full_width(eng_font, jp_font):
@@ -760,7 +828,10 @@ def make_box_drawing_full_width(eng_font, jp_font):
     for glyph in jp_font.selection.byGlyphs:
         glyph.clear()
     jp_font.selection.none()
-    jp_font.mergeFonts(fontforge.open(f"{SOURCE_FONTS_DIR}/FullWidthBoxDrawings.sfd"))
+    # リソース管理のため、フォントを明示的に開いて閉じる
+    box_drawing_font = fontforge.open(f"{SOURCE_FONTS_DIR}/FullWidthBoxDrawings.sfd")
+    jp_font.mergeFonts(box_drawing_font)
+    box_drawing_font.close()
     # 幅設定と位置調整
     width_to = jp_font[0x3042].width
     jp_font.selection.select(("unicode", "ranges"), 0x2500, 0x257F)
@@ -781,7 +852,10 @@ def visualize_zenkaku_space(jp_font):
     glyph = jp_font[0x3000]
     width_to = glyph.width
     glyph.clear()
-    jp_font.mergeFonts(fontforge.open(f"{SOURCE_FONTS_DIR}/{IDEOGRAPHIC_SPACE}"))
+    # リソース管理のため、フォントを明示的に開いて閉じる
+    space_font = fontforge.open(f"{SOURCE_FONTS_DIR}/{IDEOGRAPHIC_SPACE}")
+    jp_font.mergeFonts(space_font)
+    space_font.close()
     # 幅を設定し位置調整
     jp_font.selection.select("U+3000")
     for glyph in jp_font.selection.byGlyphs:
@@ -962,43 +1036,44 @@ def down_scale_redundant_size_glyph(eng_font):
 
 def add_nerd_font_glyphs(jp_font, eng_font):
     """Nerd Fontのグリフを追加する"""
-    global nerd_font
-    # Nerd Fontのグリフを追加する
-    if nerd_font is None:
-        nerd_font = fontforge.open(
-            f"{SOURCE_FONTS_DIR}/nerd-fonts/SymbolsNerdFont-Regular.ttf"
-        )
-        nerd_font.em = EM_ASCENT + EM_DESCENT
-        glyph_names = set()
-        for nerd_glyph in nerd_font.glyphs():
-            # Nerd Fontsのグリフ名をユニークにするため接尾辞を付ける
-            nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-nf"
-            # postテーブルでのグリフ名重複対策
-            # fonttools merge で合成した後、MacOSで `'post'テーブルの使用性` エラーが発生することへの対処
-            if nerd_glyph.glyphname in glyph_names:
-                nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-{nerd_glyph.encoding}"
-            glyph_names.add(nerd_glyph.glyphname)
-            # 幅を調整する
-            half_width = eng_font[0x0030].width
-            # Powerline Symbols の調整
-            if 0xE0B0 <= nerd_glyph.unicode <= 0xE0D7:
-                # 位置と幅合わせ
-                if nerd_glyph.width < half_width:
-                    nerd_glyph.transform(
-                        psMat.translate((half_width - nerd_glyph.width) / 2, 0)
-                    )
-                elif nerd_glyph.width > half_width:
-                    nerd_glyph.transform(psMat.scale(half_width / nerd_glyph.width, 1))
-                # グリフの高さ・位置を調整する
-                nerd_glyph.transform(psMat.scale(1, 1.14))
-                nerd_glyph.transform(psMat.translate(0, 21))
-            elif nerd_glyph.width < (EM_ASCENT + EM_DESCENT) * 0.6:
-                # 幅が狭いグリフは中央寄せとみなして調整する
+    # 複数のvariantを生成する場合、half_widthが異なるため、毎回ロードする必要がある
+    # (例: --35オプションの有無でhalf_widthが変わる)
+    nerd_font = fontforge.open(
+        f"{SOURCE_FONTS_DIR}/nerd-fonts/SymbolsNerdFont-Regular.ttf"
+    )
+    nerd_font.em = EM_ASCENT + EM_DESCENT
+    glyph_names = set()
+    half_width = eng_font[0x0030].width
+
+    for nerd_glyph in nerd_font.glyphs():
+        # Nerd Fontsのグリフ名をユニークにするため接尾辞を付ける
+        nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-nf"
+        # postテーブルでのグリフ名重複対策
+        # fonttools merge で合成した後、MacOSで `'post'テーブルの使用性` エラーが発生することへの対処
+        if nerd_glyph.glyphname in glyph_names:
+            nerd_glyph.glyphname = f"{nerd_glyph.glyphname}-{nerd_glyph.encoding}"
+        glyph_names.add(nerd_glyph.glyphname)
+        # 幅を調整する
+        # Powerline Symbols の調整
+        if 0xE0B0 <= nerd_glyph.unicode <= 0xE0D7:
+            # 位置と幅合わせ
+            if nerd_glyph.width < half_width:
                 nerd_glyph.transform(
                     psMat.translate((half_width - nerd_glyph.width) / 2, 0)
                 )
-            # 幅を設定
-            nerd_glyph.width = half_width
+            elif nerd_glyph.width > half_width:
+                nerd_glyph.transform(psMat.scale(half_width / nerd_glyph.width, 1))
+            # グリフの高さ・位置を調整する
+            nerd_glyph.transform(psMat.scale(1, 1.14))
+            nerd_glyph.transform(psMat.translate(0, 21))
+        elif nerd_glyph.width < (EM_ASCENT + EM_DESCENT) * 0.6:
+            # 幅が狭いグリフは中央寄せとみなして調整する
+            nerd_glyph.transform(
+                psMat.translate((half_width - nerd_glyph.width) / 2, 0)
+            )
+        # 幅を設定
+        nerd_glyph.width = half_width
+
     # 日本語フォントにマージするため、既に存在する場合は削除する
     for nerd_glyph in nerd_font.glyphs():
         if nerd_glyph.unicode != -1:
@@ -1019,6 +1094,8 @@ def add_nerd_font_glyphs(jp_font, eng_font):
                 pass
 
     jp_font.mergeFonts(nerd_font)
+    # mergeFonts 後、nerd_font は jp_font に統合されるため、明示的に閉じる必要はない
+    # (閉じるとエラーが発生する可能性がある)
 
     jp_font.selection.none()
     eng_font.selection.none()

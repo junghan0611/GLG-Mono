@@ -2,12 +2,16 @@
 
 - Source fonts are licensed under SIL OPEN FONT LICENSE Version 1.1.
   For more information, see "LICENSE_<FontName>" file contained in the "source" directory.
-- "PlemolJP" are licensed under SIL OPEN FONT LICENSE Version 1.1.
+- "GLG-Mono" are licensed under SIL OPEN FONT LICENSE Version 1.1.
 - Other source code, such as generating scripts, will use the MIT license.
 
-## "PlemolJP" licensing
+## "GLG-Mono" licensing
 
-Copyright (c) 2021, Yuko OTAWARA. with Reserved Font Name "PlemolJP"
+Copyright (c) 2025, Junghan Kim (junghan0611). with Reserved Font Name "GLG-Mono"
+
+This font is derived from:
+- PlemolKR Copyright (c) 2024, soomtong
+- PlemolJP Copyright (c) 2021, Yuko OTAWARA
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
@@ -103,6 +107,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ## Other source licensing (MIT)
 
+Copyright (c) 2025 Junghan Kim (junghan0611)
+Copyright (c) 2024 soomtong
 Copyright (c) 2021 Yuko OTAWARA
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
