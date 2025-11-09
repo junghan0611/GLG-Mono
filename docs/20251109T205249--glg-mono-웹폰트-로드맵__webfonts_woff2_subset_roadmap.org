@@ -1,0 +1,266 @@
+#+title:      GLG-Mono 웹폰트 로드맵
+#+date:       [2025-11-09 Sat 20:52]
+#+filetags:   :webfonts:woff2:subset:roadmap:
+#+identifier: 20251109T205249
+
+* 현재 상태 (v1.0.0)
+
+웹폰트 지원은 *계획 중*이며 v1.0.0에는 포함되지 않음.
+
+* 목표: Digital Garden 통합
+
+** 현재 폰트 설정 (notes.junghanacs.com)
+
+#+begin_src typescript
+// quartz.config.ts
+typography: {
+  header: "Hahmlet",
+  title: "42dot Sans",
+  body: "42dot Sans",
+  code: "Nanum Gothic Coding",  // ← GLG-Mono로 교체 목표
+}
+#+end_src
+
+** 제안하는 변경
+
+#+begin_src typescript
+typography: {
+  header: "Hahmlet",
+  title: "42dot Sans",
+  body: "42dot Sans",
+  code: "GLG-MonoConsole",  // ← GLG-Mono 웹폰트
+}
+#+end_src
+
+* 기술 요구사항
+
+** 1. WOFF2 포맷 변환
+
+*** 기본 변환 (전체 글리프)
+
+- TTF → WOFF2 (Brotli 압축)
+- 예상 크기: 폰트당 ~3-4 MB (TTF 7-8 MB에서)
+- 압축률: ~50% 파일 크기 감소
+- 서브셋 없음: 35,000+ 글리프 전체 포함
+
+*** 구현 예시
+
+#+begin_src bash
+# fontTools 사용
+python -c "
+from fontTools import ttLib
+font = ttLib.TTFont('GLG-MonoConsole-Regular.ttf')
+font.flavor = 'woff2'
+font.save('GLG-MonoConsole-Regular.woff2')
+"
+#+end_src
+
+** 2. 폰트 서브셋팅 (권장)
+
+*** 목적
+
+- 파일 크기 감소: ~3-4 MB → ~500 KB - 1 MB
+- 웹 전달용 자주 쓰는 글리프만 포함
+- 페이지 로드 성능 개선
+
+*** 서브셋 구성
+
+- *한글*: 자주 쓰는 2,350자 (KS X 1001 표준)
+- *영문*: ASCII + Latin Extended (U+0020-U+024F)
+- *프로그래밍 심볼*: λ ƒ ∘ ∅ ∈ ∉ ∧ ∨ ∀ ∃
+- *Denote 기호*: § ¶ † ‡ № ⓕ ↔ → ⊢ ∉
+- *CJK 괄호*: 『』 《》 〈〉 ｢｣
+- *총 글리프 수*: ~4,000개
+
+*** 구현 예시
+
+#+begin_src bash
+# pyftsubset (fontTools) 사용
+pyftsubset GLG-MonoConsole-Regular.ttf \
+  --output-file=GLG-MonoConsole-Regular-subset.woff2 \
+  --flavor=woff2 \
+  --unicodes="U+0020-U+024F,U+AC00-U+D7A3,U+..."
+#+end_src
+
+** 3. CSS 통합
+
+*** Font Face 선언
+
+#+begin_src css
+@font-face {
+  font-family: 'GLG-MonoConsole';
+  src: url('/fonts/GLG-MonoConsole-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GLG-MonoConsole';
+  src: url('/fonts/GLG-MonoConsole-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+#+end_src
+
+*** Quartz에서 사용
+
+#+begin_src css
+code, pre {
+  font-family: 'GLG-MonoConsole', monospace;
+}
+#+end_src
+
+* 구현 단계
+
+** Phase 1: 기본 WOFF2 (v1.1.0)
+
+*** 범위
+
+- 단순 TTF → WOFF2 변환
+- 전체 글리프 (서브셋 없음)
+- Console 변형에 집중 (Regular, Bold, Italic, BoldItalic)
+
+*** 결과물
+
+- 4개 웹폰트 (총 ~12-16 MB)
+- CSS 템플릿
+- 문서화
+
+*** 일정
+
+v1.0.0 릴리스 이후
+
+** Phase 2: 최적화 서브셋 (v1.2.0)
+
+*** 범위
+
+- 한글 서브셋 (자주 쓰는 2,350자)
+- Latin + 심볼 서브셋
+- Digital Garden에서 종합 테스트
+
+*** 결과물
+
+- 서브셋 WOFF2 폰트 (총 ~2-4 MB)
+- 자동 서브셋팅 스크립트
+- 성능 벤치마크
+
+*** 일정
+
+Phase 1 피드백 기반
+
+** Phase 3: 가변 폰트 (미래)
+
+*** 범위
+
+- 여러 웨이트를 단일 파일로 결합
+- Weight axis: 100-700 (Thin to Bold)
+- 추가 크기 최적화
+
+*** 결과물
+
+- 가변 폰트 WOFF2 (모든 웨이트 ~2-3 MB)
+- font-variation-settings 활용 CSS
+
+*** 일정
+
+v2.0.0 고려사항
+
+* 웹용 폰트 웨이트
+
+** Digital Garden 권장 서브셋
+
+| 웨이트          | 스타일 | 용도                | 우선순위 |
+|-----------------+--------+---------------------+----------|
+| Regular (400)   | Normal | 코드 블록, 인라인   | 높음     |
+| Bold (700)      | Normal | 강조 코드, 헤더     | 높음     |
+| Regular (400)   | Italic | 주석, 문서          | 중간     |
+| Bold (700)      | Italic | 강조 주석           | 낮음     |
+
+** 파일 크기 예상 (서브셋)
+
+- Regular: ~500 KB
+- Bold: ~500 KB
+- Regular Italic: ~550 KB
+- Bold Italic: ~550 KB
+- *총합: ~2.1 MB* (전체 세트 ~16 MB 대비)
+
+* 성능 고려사항
+
+** 로딩 전략
+
+*** font-display 옵션
+
+- =swap=: 폴백 폰트 즉시 표시, 로드되면 교체 (권장)
+- =block=: 최대 3초 대기, 보이지 않는 텍스트 표시 (아이콘 폰트용)
+- =optional=: 100ms 내 가능하면 사용, 아니면 폴백
+
+*** 프리로딩
+
+#+begin_src html
+<link rel="preload" href="/fonts/GLG-MonoConsole-Regular.woff2"
+      as="font" type="font/woff2" crossorigin>
+#+end_src
+
+** 폴백 스택
+
+#+begin_src css
+font-family: 'GLG-MonoConsole',
+             'Nanum Gothic Coding',  /* 현재 폴백 */
+             'Consolas',
+             'Monaco',
+             monospace;
+#+end_src
+
+* 테스트 체크리스트
+
+** Phase 1 테스트
+- [ ] WOFF2 변환 성공
+- [ ] Chrome/Firefox/Safari에서 폰트 렌더링 정상
+- [ ] 한글 글리프 정상 표시
+- [ ] 유니코드 심볼 정상 렌더링
+- [ ] 파일 크기 예상치 충족 (~50% 감소)
+
+** Phase 2 테스트
+- [ ] 서브셋에 필요한 글리프 전체 포함
+- [ ] Digital Garden 콘텐츠에서 누락 문자 없음
+- [ ] 페이지 로드 시간 개선 측정
+- [ ] 모바일 성능 적절
+- [ ] 폴백 폰트 정상 작동
+
+* 참조
+
+** 도구
+
+- *fontTools*: Python 폰트 조작 라이브러리
+  - =ttLib=: TTF/OTF 읽기/쓰기
+  - =subset=: 글리프 서브셋팅
+- *Brotli*: 압축 라이브러리 (WOFF2에서 사용)
+
+** 표준
+
+- WOFF2 Spec: https://www.w3.org/TR/WOFF2/
+- CSS Fonts Module: https://www.w3.org/TR/css-fonts-4/
+- 한글 표준: KS X 1001 (자주 쓰는 2,350자)
+
+** 관련 프로젝트
+
+- *Pretendard*: 훌륭한 서브셋팅을 가진 한글 웹폰트
+- *SUIT*: 또 다른 현대적 한글 웹폰트
+- *IBM Plex*: 공식 웹폰트 배포 있음
+
+* 참고사항
+
+- 웹폰트 배포는 SIL OFL 1.1 준수 필요 (이미 충족)
+- CDN 호스팅 vs. 셀프 호스팅 고려
+- Digital Garden 실제 사용량 모니터링하여 서브셋 개선
+- 실제 Org-mode 내보낸 콘텐츠로 테스트
+- 코드 블록에서 Denote 파일명 렌더링 확인
+
+* 메타데이터
+
+- *상태*: 계획 단계
+- *목표*: v1.1.0 기본 WOFF2, v1.2.0 최적화 서브셋
+- *담당자*: junghan0611
+- *최종 업데이트*: 2025-11-09
