@@ -14,6 +14,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Version**: v3.0.0
 **License**: SIL Open Font License 1.1 (fonts), MIT License (build scripts)
 
+### Release Policy
+
+**Official releases only include Console variants:**
+- PlemolKRConsole (1:2 ratio)
+- PlemolKR35Console (3:5 ratio)
+
+**Why Console-only?**
+- Better alignment in terminals (East Asian Ambiguous Width characters become half-width)
+- Enhanced symbol support for console environments (arrows, checkmarks, etc.)
+- Improved Nerd Fonts compatibility
+- Practical choice for programming/CLI environments where most users actually need these fonts
+
 ### Font Composition
 - **English/ASCII**: IBM Plex Mono (monospace, primary programming glyphs)
 - **Korean**: IBM Plex Sans KR (Korean characters - primary target)

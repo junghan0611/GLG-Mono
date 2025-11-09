@@ -506,17 +506,21 @@ def test_korean_glyph_bearing():
 - [X] IBM Plex Sans KR width 확인
 - [X] 기술 문서 작성
 
-** Phase 2: 수정 구현 (진행 중)
-- [ ] fontforge_script.py 수정
-- [ ] 단위 테스트 작성
-- [ ] Quick build로 검증
-- [ ] 전체 빌드 테스트
+** Phase 2: 수정 구현 (완료)
+- [X] fontforge_script.py 수정
+- [X] 단위 테스트 작성
+- [X] Quick build로 검증
+- [X] Bearing 검증 완료 (LSB = RSB)
 
-** Phase 3: 검증 및 테스트
-- [ ] Linux 환경 테스트
-- [ ] macOS 환경 테스트 (가능 시)
-- [ ] Windows 환경 테스트 (가능 시)
+** Phase 3: 검증 및 테스트 (진행 중)
+- [ ] Console 버전 전체 빌드 (32개 폰트)
+  - PlemolKRConsole (16 fonts: 8 weights × 2 styles)
+  - PlemolKR35Console (16 fonts: 8 weights × 2 styles)
+- [ ] Linux + Emacs 환경 테스트
 - [ ] 시각적 비교 문서 작성
+
+*참고*: 공식 릴리즈는 Console 버전만 제공
+- 이유: 프로그래밍/CLI 환경 최적화, Nerd Fonts 호환성
 
 ** Phase 4: PR 제출
 - [ ] 코드 리뷰 준비
