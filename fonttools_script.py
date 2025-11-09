@@ -100,8 +100,9 @@ def add_hinting(input_font_path, output_font_path, variant, style):
     ]
     options_ = options.parse_args(args)
     # Remove epoch option for ttfautohint 1.8.3/1.8.4 compatibility
-    options_dict = {k: v for k, v in vars(options_).items() if k != 'epoch'}
-    ttfautohint(**options_dict)
+    if hasattr(options_, 'epoch'):
+        delattr(options_, 'epoch')
+    ttfautohint(**options_)
 
 
 def merge_fonts(style, variant):

@@ -1,8 +1,30 @@
 #!/usr/bin/env bash
 # Build all Console variants (PlemolKRConsole + PlemolKR35Console)
 # This script runs the complete build process in nix-shell
+#
+# Usage:
+#   ./build_console_all.sh [--zip]
+#
+# Options:
+#   --zip    Create zip archives of the final fonts
 
 set -e  # Exit on error
+
+# Parse arguments
+CREATE_ZIP=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --zip)
+            CREATE_ZIP=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--zip]"
+            exit 1
+            ;;
+    esac
+done
 
 echo "🚀 PlemolKR Console Full Build"
 echo "=============================="
@@ -13,6 +35,9 @@ if [ ! -f "build.ini" ]; then
     echo "❌ Error: build.ini not found. Please run from repository root."
     exit 1
 fi
+
+# Read version from build.ini
+VERSION=$(grep "^VERSION" build.ini | cut -d'=' -f2 | tr -d ' ')
 
 # Start timing
 START_TIME=$(date +%s)
@@ -79,6 +104,33 @@ SECONDS=$((ELAPSED % 60))
 echo ""
 echo "⏱️  Total build time: ${MINUTES}m ${SECONDS}s"
 echo ""
+
+# Optional: Create zip archives
+if [ "$CREATE_ZIP" = true ]; then
+    echo "📦 Creating zip archives..."
+    echo ""
+
+    # Create zip for PlemolKRConsole
+    if [ $CONSOLE_COUNT -gt 0 ]; then
+        ZIP_NAME="PlemolKRConsole_${VERSION}.zip"
+        cd build
+        zip -q "$ZIP_NAME" PlemolKRConsole-*.ttf
+        cd ..
+        echo "  ✅ Created: build/$ZIP_NAME ($CONSOLE_COUNT fonts)"
+    fi
+
+    # Create zip for PlemolKR35Console
+    if [ $CONSOLE35_COUNT -gt 0 ]; then
+        ZIP_NAME="PlemolKR35Console_${VERSION}.zip"
+        cd build
+        zip -q "$ZIP_NAME" PlemolKR35Console-*.ttf
+        cd ..
+        echo "  ✅ Created: build/$ZIP_NAME ($CONSOLE35_COUNT fonts)"
+    fi
+
+    echo ""
+fi
+
 echo "✅ All Console variants built successfully!"
 echo ""
 echo "📄 Build log: $BUILD_LOG"
@@ -87,3 +139,6 @@ echo "Next steps:"
 echo "  1. Test fonts in Emacs: build/PlemolKRConsole-Regular.ttf"
 echo "  2. Install fonts: cp build/PlemolKR*Console-*.ttf ~/.local/share/fonts/"
 echo "  3. Refresh font cache: fc-cache -fv"
+if [ "$CREATE_ZIP" = true ]; then
+    echo "  4. Release packages: build/PlemolKR*Console_${VERSION}.zip"
+fi
