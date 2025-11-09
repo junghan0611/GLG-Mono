@@ -764,8 +764,16 @@ def adjust_width_35_jp(jp_font):
             glyph.transform(psMat.translate((after_width - glyph.width) / 2, 0))
             glyph.width = after_width
         elif glyph.width == jp_full_width:
-            glyph.transform(psMat.translate((FULL_WIDTH_35 - glyph.width) / 2, 0))
-            glyph.width = FULL_WIDTH_35
+            # Full-width: apply proper bearing adjustment for center alignment
+            target_width = FULL_WIDTH_35  # 1000
+            bbox = glyph.boundingBox()
+            # bbox: (xmin, ymin, xmax, ymax)
+            # Calculate actual glyph width
+            actual_width = bbox[2] - bbox[0]
+            # Center alignment: calculate offset to make left and right bearings equal
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
 
 
 def transform_half_width(jp_font, eng_font):
