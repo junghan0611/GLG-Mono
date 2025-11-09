@@ -28,10 +28,11 @@ For deeper philosophy and background, see [`docs/PHILOSOPHY.org`](docs/PHILOSOPH
   ```
   § ¶ † ‡ № ⓕ ↔ → ⊢ ∉ © ¬ ¢ ¤ µ ¥ £ ¡ ¿
   ```
-- **Programming Ligatures**: cashpw-style Unicode ligatures
+- **Programming Ligatures**: Functional programming and logic symbols
   ```
-  λ ƒ ∘ ∅ ℤ ℝ 𝔹 𝕥 𝕗 ∈ ∉ ∧ ∨ ∀ ∃
+  λ ƒ ∘ ∅ ∈ ∉ ∧ ∨ ∀ ∃
   ```
+- **Planned Addition**: Double-struck math symbols (ℤ ℝ 𝔹 𝕥 𝕗)
 - **Math & Logic Symbols**: Type systems, functional programming, logic operations
 - **Ancient Korean**: ㅹ ㆅ ㅺ ㉼ ㉽
 - **CJK Brackets**: 『』 《》 〈〉 ｢｣
