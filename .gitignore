@@ -6,3 +6,5 @@ build/
 release_files/
 __pycache__/
 *__human.org
+.claude/
+.vscode/
