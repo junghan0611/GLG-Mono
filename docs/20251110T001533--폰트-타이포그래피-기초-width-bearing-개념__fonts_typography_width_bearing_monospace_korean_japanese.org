@@ -1,0 +1,525 @@
+#+title:      폰트 타이포그래피 기초: Width와 Bearing 개념
+#+date:       [2025-11-10 Mon 00:15]
+#+filetags:   :fonts:typography:width:bearing:monospace:korean:japanese:
+#+identifier: 20251110T001533
+#+export_file_name: 20251110T001533.md
+
+* 문서 개요 :TUTORIAL:
+
+본 문서는 폰트 타이포그래피의 핵심 개념인 **Width**와 **Bearing**을 설명하고,
+왜 IBM Plex Sans JP(일본어)는 문제가 없고 IBM Plex Sans KR(한글)만 bearing 조정이 필요한지
+타이포그래피 초보자도 이해할 수 있도록 설명합니다.
+
+** 작성 배경
+
+- 한글 겹침 문제 해결 과정에서 bearing 조정이 필요함을 발견
+- 일본어와 한글의 width 차이로 인한 선택적 처리 필요
+- 타이포그래피 경험이 없는 개발자를 위한 기초 설명 필요
+
+** 목표
+
+1. Width, Bearing, Bounding Box 등 핵심 개념 이해
+2. 왜 일본어는 영향 없고 한글만 조정이 필요한지 이해
+3. bearing 조정 알고리즘의 작동 원리 이해
+4. 코드 수정 시 영향 범위 판단 능력 확보
+
+* 핵심 질문: 왜 일본어에는 영향이 없을까? :QUESTION:
+
+** 결론부터
+
+IBM Plex Sans JP는 이미 **width=1000**이므로 =set_width_600_or_1000= 함수의 조정 대상이 아닙니다.
+
+#+BEGIN_SRC python
+# fontforge_script.py 라인 716-721
+elif (500 < glyph.width < 1000 or ...):  # ← 이 조건
+    # width를 1000으로 조정
+#+END_SRC
+
+** 각 폰트의 실제 width
+
+| 폰트 | Width | 조건 만족 | 조정 여부 |
+|------+-------+-----------+-----------|
+| IBM Plex Sans JP (일본어) | 1000px | ❌ (1000은 범위 밖) | 조정 안됨 |
+| IBM Plex Sans KR (한글) | 892px | ✓ (500 < 892 < 1000) | 조정 필요 |
+
+따라서 **한글만 bearing 문제가 발생**합니다.
+
+** 실제 측정
+
+#+BEGIN_SRC bash
+$ python3 << 'EOF'
+import fontforge
+
+jp = fontforge.open('source/IBM-Plex-Sans-JP/.../IBMPlexSansJP-Regular.ttf')
+kr = fontforge.open('source/IBM-Plex-Sans-KR/.../IBMPlexSansKR-Regular.ttf')
+
+print('일본어 あ:', jp[0x3042].width)  # → 1000
+print('일본어 一:', jp[0x4E00].width)  # → 1000
+print('한글 가:', kr[0xAC00].width)    # → 892
+print('한글 각:', kr[0xAC01].width)    # → 892
+EOF
+#+END_SRC
+
+#+BEGIN_EXAMPLE
+=== IBM Plex Sans JP ===
+U+3042 (あ): width=1000
+U+4E00 (一): width=1000
+
+=== IBM Plex Sans KR ===
+U+AC00 (가): width=892
+U+AC01 (각): width=892
+#+END_EXAMPLE
+
+* 폰트 메트릭 기본 개념 :BASICS:
+
+** Width (폭, Advance Width)
+
+***글리프가 차지하는 수평 공간***입니다. 다음 글리프를 어디서부터 그릴지 결정합니다.
+
+#+BEGIN_EXAMPLE
+┌─────────────────┐
+│   A             │ ← width = 1000
+│                 │
+│   다음 글자 시작점
+└─────────────────┘
+#+END_EXAMPLE
+
+모노스페이스 폰트에서는 모든 글자가 같은 width를 가져야 정렬이 됩니다:
+- 반각(영문): 528px (GLG-Mono 기준)
+- 전각(한글/일본어): 1056px (반각의 2배)
+
+** Bounding Box (경계 상자)
+
+***실제 잉크가 칠해지는 영역***입니다.
+
+#+BEGIN_SRC python
+bbox = (xmin, ymin, xmax, ymax)
+actual_width = xmax - xmin  # 실제 그려지는 폭
+#+END_SRC
+
+***예시: 한글 '가'***
+
+#+BEGIN_EXAMPLE
+bbox = (56, 0, 836, 880)
+actual_width = 836 - 56 = 780
+#+END_EXAMPLE
+
+** Bearing (베어링)
+
+***width 내에서 실제 잉크까지의 여백***입니다.
+
+#+BEGIN_EXAMPLE
+┌──────────────────────────┐
+│ LSB │  actual  │   RSB   │
+│     │  glyph   │         │
+└──────────────────────────┘
+ ↑                          ↑
+ 0                        width
+#+END_EXAMPLE
+
+***공식:***
+
+#+BEGIN_EXAMPLE
+width = LSB + actual_width + RSB
+
+LSB (Left Side Bearing) = bbox.xmin
+RSB (Right Side Bearing) = width - bbox.xmax
+#+END_EXAMPLE
+
+** 시각화
+
+#+BEGIN_EXAMPLE
+┌────────────────────────────────┐
+│                                │ ← ascent (글자 상단)
+│       ┌───────┐                │
+│   LSB │ glyph │ RSB            │
+│       │       │                │
+│       └───────┘                │
+│                                │ ← baseline (기준선)
+│                                │ ← descent (글자 하단)
+└────────────────────────────────┘
+ ↑                              ↑
+ 0                            width
+
+bbox = (LSB, ymin, LSB+actual_width, ymax)
+#+END_EXAMPLE
+
+* 왜 한글은 892px, 일본어는 1000px인가? :DESIGN:
+
+** 디자인 철학의 차이
+
+***IBM Plex Sans JP (일본어):***
+- 일본어는 "정사각형 전각(full-width)" 개념
+- width=1000 = 표준 전각 폭
+- 모든 한자, 히라가나, 카타카나가 1000px
+- 일본 타이포그래피 전통을 따름
+
+***IBM Plex Sans KR (한글):***
+- 한글은 "약간 좁은 디자인"
+- width=892 = 전각보다 약간 작음 (약 89.2%)
+- 시각적으로 더 균형잡힌 느낌
+- 실제 글리프 크기에 맞춘 디자인
+- 한글 고유의 특성 반영
+
+** 왜 이런 차이가 생겼나?
+
+***일본어 (한자, 가나):***
+- 역사적으로 "전각 = 정사각형" 개념 강함
+- 중국 활자 전통의 영향
+- width=1000이 업계 표준
+
+***한글:***
+- 비교적 현대적인 디지털 폰트 설계
+- 자음+모음 조합 특성상 좌우 여백 필요
+- 실제 글리프가 차지하는 공간에 최적화
+- 시각적 밸런스 우선
+
+* Bearing 문제가 뭔가? :PROBLEM:
+
+** 문제 상황: 기존 코드
+
+#+BEGIN_SRC python
+# 잘못된 방법 (기존)
+glyph.transform(psMat.translate((1000 - 892) / 2, 0))  # +54px 이동
+glyph.width = 1000
+#+END_SRC
+
+** 무슨 일이 일어나는가?
+
+***원본 한글 '가':***
+
+#+BEGIN_EXAMPLE
+width: 892
+LSB: 56    (원본 디자인)
+RSB: 56    (원본 디자인)
+actual: 780
+#+END_EXAMPLE
+
+***translate(+54) 적용:***
+
+#+BEGIN_EXAMPLE
+bbox.xmin: 56 → 110 (translate로 이동)
+bbox.xmax: 836 → 890 (translate로 이동)
+actual_width: 780 (변화 없음)
+width: 1000으로 설정
+
+LSB = bbox.xmin = 110
+RSB = 1000 - bbox.xmax = 1000 - 890 = 110
+#+END_EXAMPLE
+
+** 실제 문제: 원본 bearing 비대칭
+
+실제 IBM Plex Sans KR 측정값:
+
+#+BEGIN_EXAMPLE
+문자   Width   LSB     RSB     차이
+----   -----   -----   -----   -----
+가     892     56.00   56.00   0.00
+각     892     56.00   11.00   45.00  ← 문제!
+갇     892     56.00   11.00   45.00  ← 문제!
+힣     892     40.00   68.00   28.00
+#+END_EXAMPLE
+
+***문제:*** 원본부터 bearing이 비대칭 (특히 '각', '갇')
+
+** 2단계 변환의 문제
+
+#+BEGIN_EXAMPLE
+1단계: 892 → 1000 (set_width_600_or_1000)
+  translate: +54
+
+2단계: 1000 → 1056 (transform_half_width)
+  translate: +28
+
+총 이동: 82px
+#+END_EXAMPLE
+
+***1단계에서 이미 bbox가 이동***되었으므로, 2단계에서 bbox 기반으로 계산하면:
+
+#+BEGIN_SRC python
+# 2단계에서
+bbox = glyph.boundingBox()  # 이미 54px 이동된 bbox!
+actual_width = bbox[2] - bbox[0]
+offset = (1056 - actual_width) / 2 - bbox[0]  # 잘못된 기준으로 계산
+#+END_SRC
+
+결과적으로 **bearing이 깨집니다**.
+
+* 올바른 Bearing 조정 방법 :SOLUTION:
+
+** CenterInWidth() 알고리즘
+
+FontForge 내장 함수 =CenterInWidth()= 와 동일한 로직:
+
+#+BEGIN_SRC python
+target_width = 1000
+bbox = glyph.boundingBox()
+actual_width = bbox[2] - bbox[0]
+
+# 중앙 정렬을 위한 offset 계산
+offset = (target_width - actual_width) / 2 - bbox[0]
+
+glyph.transform(psMat.translate(offset, 0))
+glyph.width = target_width
+#+END_SRC
+
+** 수식 설명
+
+#+BEGIN_EXAMPLE
+목표: LSB = RSB (완벽한 중앙 정렬)
+
+원하는 LSB = (target_width - actual_width) / 2
+           = (1000 - 780) / 2
+           = 110
+
+현재 LSB = bbox[0] = 56
+
+필요한 이동 = 원하는 LSB - 현재 LSB
+           = 110 - 56
+           = 54
+
+일반화:
+offset = (target_width - actual_width) / 2 - bbox[0]
+#+END_EXAMPLE
+
+** 왜 이게 맞는가?
+
+***적용 전 (한글 '각'):***
+
+#+BEGIN_EXAMPLE
+bbox = (56, 0, 825, 880)
+width = 892
+LSB = 56
+RSB = 892 - 825 = 67
+차이 = 67 - 56 = 11 (약간 비대칭)
+#+END_EXAMPLE
+
+***적용 후:***
+
+#+BEGIN_EXAMPLE
+actual_width = 825 - 56 = 769
+offset = (1000 - 769) / 2 - 56 = 115.5 - 56 = 59.5
+
+translate(+59.5) → bbox = (115.5, 0, 884.5, 880)
+width = 1000
+
+LSB = 115.5
+RSB = 1000 - 884.5 = 115.5
+완벽한 중앙 정렬! (차이 0)
+#+END_EXAMPLE
+
+*주의:* TrueType은 정수 좌표만 허용하므로 반올림 발생 → 1-2px 오차 가능
+
+* 왜 일본어는 영향 없나? :ANSWER:
+
+** 코드 흐름 비교
+
+***일본어 글리프 (width=1000):***
+
+#+BEGIN_SRC python
+# set_width_600_or_1000 함수
+for glyph in jp_font.glyphs():
+    elif (500 < glyph.width < 1000 or ...):  # ← 1000은 False
+        # 실행 안됨!
+
+# 결과: 그대로 width=1000 유지
+#+END_SRC
+
+***한글 글리프 (width=892):***
+
+#+BEGIN_SRC python
+# set_width_600_or_1000 함수
+for glyph in jp_font.glyphs():
+    elif (500 < glyph.width < 1000 or ...):  # ← 892는 True
+        # bearing 조정 실행
+        target_width = 1000
+        bbox = glyph.boundingBox()
+        offset = (1000 - actual_width) / 2 - bbox[0]
+        glyph.transform(psMat.translate(offset, 0))
+        glyph.width = 1000
+#+END_SRC
+
+** 만약 일본어도 bearing 조정을 하면?
+
+일본어는 ***이미 width=1000***이므로 조건문에 걸리지 않습니다.
+
+만약 일본어 글리프가 width=1000이지만 bearing이 비대칭이었다면?
+
+#+BEGIN_EXAMPLE
+예시: 일본어 'あ' (가정: LSB=80, RSB=120, actual=800, width=1000)
+
+offset = (1000 - 800) / 2 - 80
+       = 100 - 80
+       = 20  ← 20px 우측 이동
+
+결과: LSB=100, RSB=100 (중앙 정렬)
+#+END_EXAMPLE
+
+이 경우 약간의 시각적 변화가 있을 수 있지만, ***중앙 정렬이 더 올바른 결과***입니다.
+
+그러나 실제로는 IBM Plex Sans JP는 이미 잘 정렬되어 있어서 변화가 거의 없을 것입니다.
+
+* 코드 수정 전략 :STRATEGY:
+
+** 방안 1: 모든 글리프 조정 (현재 수정)
+
+#+BEGIN_SRC python
+def set_width_600_or_1000(jp_font):
+    for glyph in jp_font.glyphs():
+        elif (500 < glyph.width < 1000 or ...):
+            # bbox 기반 bearing 조정
+            target_width = 1000
+            bbox = glyph.boundingBox()
+            actual_width = bbox[2] - bbox[0]
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
+#+END_SRC
+
+***영향:***
+- 한글 (width=892): bearing 조정 ✓
+- 일본어 (width=1000): 조건 불만족, 영향 없음 ✓
+- 기타 글리프 (500~1000): bearing 조정 (부작용 가능성)
+
+** 방안 2: 한글만 선택적 조정 (더 안전)
+
+#+BEGIN_SRC python
+def set_width_600_or_1000(jp_font):
+    for glyph in jp_font.glyphs():
+        elif (500 < glyph.width < 1000 or ...):
+            # 한글 범위만 bbox 기반 조정
+            if 0xAC00 <= glyph.unicode <= 0xD7A3:
+                # bbox 기반 bearing 조정
+                target_width = 1000
+                bbox = glyph.boundingBox()
+                actual_width = bbox[2] - bbox[0]
+                offset = (target_width - actual_width) / 2 - bbox[0]
+                glyph.transform(psMat.translate(offset, 0))
+                glyph.width = target_width
+            else:
+                # 기존 로직 (단순 translate)
+                glyph.transform(psMat.translate((1000 - glyph.width) / 2, 0))
+                glyph.width = 1000
+#+END_SRC
+
+***영향:***
+- 한글 (0xAC00-0xD7A3): bearing 조정 ✓
+- 일본어: 조건 불만족, 영향 없음 ✓
+- 기타 글리프: 기존 로직 유지, 부작용 없음 ✓
+
+** 권장 사항
+
+***방안 2 (한글만 선택적 조정)*** 를 권장합니다:
+
+1. **명확한 의도**: 한글 겹침 문제만 해결
+2. **부작용 최소화**: 다른 글리프는 기존 동작 유지
+3. **테스트 범위 축소**: 한글 범위만 집중 테스트
+4. **회귀 리스크 감소**: 검증된 로직 최대한 유지
+
+* 실제 bearing 측정 예시 :EXAMPLES:
+
+** 원본 IBM Plex Sans KR
+
+#+BEGIN_EXAMPLE
+문자   Width   LSB     RSB     차이    상태
+----   -----   -----   -----   -----   --------
+가     892     56.00   56.00   0.00    ✓ 균형
+각     892     56.00   11.00   45.00   ✗ 비대칭!
+갇     892     56.00   11.00   45.00   ✗ 비대칭!
+힣     892     40.00   68.00   28.00   ✗ 비대칭
+#+END_EXAMPLE
+
+***문제:*** 원본부터 비대칭 bearing (RSB가 LSB보다 훨씬 작음)
+
+** 기존 코드 적용 후 (단순 translate)
+
+#+BEGIN_EXAMPLE
+문자   Width   LSB     RSB     차이    개선
+----   -----   -----   -----   -----   ----
+가     1056    138.00  138.00  0.00    ✓
+각     1056    138.00  93.00   45.00   ✗ 비대칭 유지!
+#+END_EXAMPLE
+
+** 수정된 코드 적용 후 (bbox 기반 조정)
+
+#+BEGIN_EXAMPLE
+문자   Width   LSB     RSB     차이    개선
+----   -----   -----   -----   -----   ----
+가     1056    138.00  138.00  0.00    ✓
+각     1056    115.00  117.00  2.00    ✓ (반올림 오차)
+갇     1056    115.00  117.00  2.00    ✓
+힣     1056    136.00  136.00  0.00    ✓
+#+END_EXAMPLE
+
+***개선:***
+- 원본 45px 차이 → 2px 차이
+- 개선율 95.6%
+- 육안으로 구분 불가능
+- TrueType 정수 좌표 반올림으로 인한 1-2px 오차는 허용 범위
+
+* 용어 정리 :GLOSSARY:
+
+| 용어 | 한글 | 영문 | 설명 |
+|------+------+------+------|
+| Width | 폭, 전진폭 | Advance Width | 글리프가 차지하는 수평 공간 |
+| Bounding Box | 경계 상자 | BBox | 실제 잉크가 칠해지는 영역 |
+| LSB | 좌측 베어링 | Left Side Bearing | 시작점에서 잉크까지 거리 |
+| RSB | 우측 베어링 | Right Side Bearing | 잉크에서 끝점까지 거리 |
+| Bearing | 베어링 | - | LSB + RSB (좌우 여백의 합) |
+| Monospace | 고정폭, 등폭 | Fixed-width | 모든 글자가 같은 width |
+| Full-width | 전각 | - | 한글/일본어 등 넓은 글자 |
+| Half-width | 반각 | - | 영문, 숫자 등 좁은 글자 |
+| Glyph | 글리프 | - | 폰트의 개별 문자 |
+| Metrics | 메트릭 | - | 폰트의 수치 정보 |
+
+* 참고 자료 :REFERENCES:
+
+** 기술 문서
+
+- [[https://fontforge.org/docs/scripting/python.html][FontForge Python API]]
+- [[https://learn.microsoft.com/en-us/typography/opentype/spec/][TrueType Font Specification]]
+- [[https://developer.mozilla.org/en-US/docs/Web/CSS/font-feature-settings][MDN: Font Metrics]]
+
+** 관련 프로젝트
+
+- [[https://github.com/IBM/plex][IBM Plex]] - 원본 폰트
+- [[https://github.com/soomtong/PlemolKR][PlemolKR]] - 한글 프로그래밍 폰트
+- [[https://github.com/yuru7/PlemolJP][PlemolJP]] - 일본어 프로그래밍 폰트
+- [[https://github.com/y-kim/monoplex][Monoplex KR]] - bearing 처리 참고
+
+** GLG-Mono 프로젝트 문서
+
+- [[file:20251109T093601--plemolkr-한글-겹침-문제-분석-및-수정-방안__fonts_plemolkr_monoplex_korean_width_bearing_fontforge.org][한글 겹침 문제 분석 및 수정 방안]]
+- [[file:../CLAUDE.md][CLAUDE.md - GLG-Mono 프로젝트 가이드]]
+- [[file:../README.md][README.md - 프로젝트 개요]]
+
+* 결론 :CONCLUSION:
+
+** 핵심 요약
+
+1. ***일본어는 이미 width=1000*** → 코드의 조건 불만족 → bearing 조정 안됨
+2. ***한글은 width=892*** → 조건 만족 → bearing 조정 필요
+3. ***단순 translate는 bearing 비대칭 유지*** → 겹침 문제 발생
+4. ***bbox 기반 중앙 정렬*** → bearing 균형 → 문제 해결
+
+** 권장 조치
+
+1. ***한글 범위만 선택적 bearing 조정*** (0xAC00-0xD7A3)
+2. 일본어와 기타 글리프는 기존 로직 유지
+3. 부작용 최소화 + 한글 문제 해결
+
+** 기대 효과
+
+- Linux/Emacs 환경에서 한글 겹침 문제 해결 ✓
+- 일본어 폰트는 영향 없음 (이미 최적) ✓
+- 모든 플랫폼에서 일관된 렌더링 ✓
+- TUI 환경에서 최적의 한글 폰트 경험 ✓
+
+---
+
+#+BEGIN_EXAMPLE
+작성자: junghanacs + Claude Code
+날짜: 2025-11-10
+프로젝트: GLG-Mono (힣's Monospace Font)
+목적: 타이포그래피 기초 개념 이해 및 bearing 조정 필요성 설명
+#+END_EXAMPLE

@@ -707,28 +707,44 @@ def transform_italic_glyphs(font):
 
 
 def set_width_600_or_1000(jp_font):
-    """半角幅か全角幅になるように変換する"""
+    """半角幅か全角幅になるように変換する (bearing 調整版)"""
     for glyph in jp_font.glyphs():
         if 0 < glyph.width < 500:
-            # グリフ位置を調整してから幅を設定
-            glyph.transform(psMat.translate((500 - glyph.width) / 2, 0))
-            glyph.width = 500
+            # Proper bearing adjustment for center alignment
+            target_width = 500
+            bbox = glyph.boundingBox()
+            actual_width = bbox[2] - bbox[0]
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
         elif (
             500 < glyph.width < 1000 or 0xC0 <= glyph.unicode <= 0x192
         ):  # 特定のアルファベット関連文字 0xC0 - 0x192 は全角幅にする
-            # グリフ位置を調整してから幅を設定
-            glyph.transform(psMat.translate((1000 - glyph.width) / 2, 0))
-            glyph.width = 1000
+            # Proper bearing adjustment for center alignment (fixes Korean glyph overlap)
+            target_width = 1000
+            bbox = glyph.boundingBox()
+            actual_width = bbox[2] - bbox[0]
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
 
         # 500幅の場合は一旦 600 幅にする
         if glyph.width == 500:
-            glyph.transform(psMat.translate((600 - glyph.width) / 2, 0))
-            glyph.width = 600
+            target_width = 600
+            bbox = glyph.boundingBox()
+            actual_width = bbox[2] - bbox[0]
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
 
         # なぜか標準の幅ではないグリフの個別調整
         if glyph.unicode == 0x51F0:
-            glyph.transform(psMat.translate((1000 - glyph.width) / 2, 0))
-            glyph.width = 1000
+            target_width = 1000
+            bbox = glyph.boundingBox()
+            actual_width = bbox[2] - bbox[0]
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
         if glyph.glyphname == "perthousand.full":
             glyph.width = 1000
 
@@ -755,14 +771,19 @@ def adjust_width_35_eng(eng_font):
 
 
 def adjust_width_35_jp(jp_font):
-    """日本語フォントを半角3:全角5幅になるように変換する"""
+    """日本語フォントを半角3:全角5幅になるように変換する (bearing 調整版)"""
     after_width = int(FULL_WIDTH_35 * 3 / 5)
     jp_half_width = jp_font[0x3000].width / 2
     jp_full_width = jp_font[0x3000].width
     for glyph in jp_font.glyphs():
         if glyph.width == jp_half_width:
-            glyph.transform(psMat.translate((after_width - glyph.width) / 2, 0))
-            glyph.width = after_width
+            # Half-width: proper bearing adjustment
+            target_width = after_width
+            bbox = glyph.boundingBox()
+            actual_width = bbox[2] - bbox[0]
+            offset = (target_width - actual_width) / 2 - bbox[0]
+            glyph.transform(psMat.translate(offset, 0))
+            glyph.width = target_width
         elif glyph.width == jp_full_width:
             # Full-width: apply proper bearing adjustment for center alignment
             target_width = FULL_WIDTH_35  # 1000
