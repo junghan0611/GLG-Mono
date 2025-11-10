@@ -134,6 +134,10 @@ VERSION=$(grep "^VERSION" build.ini | cut -d'=' -f2 | tr -d ' ')
 # Start timing
 START_TIME=$(date +%s)
 
+# Setup logging
+BUILD_LOG="build/build.log"
+mkdir -p build
+
 if [ "$NERD_ONLY" = false ]; then
     # Stage 1: Clean
     echo "🧹 Step 1/4: Clean build directory"
@@ -145,15 +149,17 @@ if [ "$NERD_ONLY" = false ]; then
     # Stage 2: FontForge - Build Console variants
     echo "📝 Step 2/4: FontForge (font merging & glyph manipulation)"
     echo "-----------------------------------------------------------"
+    echo "  (Progress: console output, Logs: $BUILD_LOG)"
+    echo ""
 
     echo "Building GLG-MonoConsole (1:2 ratio)..."
-    task build:console
+    time task build:console 2>"$BUILD_LOG"
     echo "✅ GLG-MonoConsole fontforge complete"
     echo ""
 
     if [ "$BUILD_35" = true ]; then
         echo "Building GLG-Mono35Console (3:5 ratio)..."
-        task build:console35
+        time task build:console35 2>>"$BUILD_LOG"
         echo "✅ GLG-Mono35Console fontforge complete"
         echo ""
     fi
@@ -161,13 +167,15 @@ if [ "$NERD_ONLY" = false ]; then
     # Stage 3: FontTools - Post-processing
     echo "🔧 Step 3/4: FontTools (hinting & final processing)"
     echo "---------------------------------------------------"
+    echo "  (Progress: console output, Logs: $BUILD_LOG)"
+    echo ""
 
     if [ "$BUILD_35" = true ]; then
         echo "Processing all Console variants..."
-        task polish
+        time task polish 2>>"$BUILD_LOG"
     else
-        echo "Processing PlemolKRConsole only..."
-        task polish:variant VARIANT=Console
+        echo "Processing GLG-MonoConsole only..."
+        time task polish:variant VARIANT=Console 2>>"$BUILD_LOG"
     fi
     echo "✅ FontTools complete"
     echo ""
@@ -208,18 +216,23 @@ if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
         exit 1
     fi
 
+    # Setup Nerd Fonts logging
+    NERD_LOG="build/nerd_patch.log"
+
     if [ "$BUILD_35" = true ]; then
         echo "Starting Nerd Fonts patch for all Console variants..."
-        echo "(You can monitor progress in another terminal with: tail -f nerd_patch.log)"
+        echo "  (Progress: console output, Detailed logs: $NERD_LOG)"
+        echo "  (Monitor in another terminal: tail -f $NERD_LOG)"
         echo ""
-        # Run patch with output to both console and log
-        task patch:nerd:all 2>&1 | tee nerd_patch.log
+        # Run patch - stderr to log, stdout to console
+        time task patch:nerd:all 2>"$NERD_LOG"
     else
         echo "Starting Nerd Fonts patch for GLG-MonoConsole only..."
-        echo "(You can monitor progress in another terminal with: tail -f nerd_patch.log)"
+        echo "  (Progress: console output, Detailed logs: $NERD_LOG)"
+        echo "  (Monitor in another terminal: tail -f $NERD_LOG)"
         echo ""
-        # Run patch for PlemolKRConsole only
-        task patch:nerd 2>&1 | tee nerd_patch.log
+        # Run patch for GLG-MonoConsole only
+        time task patch:nerd 2>"$NERD_LOG"
     fi
 
     echo ""
@@ -293,7 +306,12 @@ echo "  4. Install fonts: cp build/GLG-Mono*Console-*.ttf ~/.local/share/fonts/"
 echo "  5. Refresh font cache: fc-cache -fv"
 echo ""
 
-if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
-    echo "📄 Nerd Fonts patch log: nerd_patch.log"
-    echo ""
+# Log file summary
+echo "📄 Build logs:"
+if [ "$NERD_ONLY" = false ]; then
+    echo "  FontForge/FontTools: $BUILD_LOG"
 fi
+if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
+    echo "  Nerd Fonts patch:    $NERD_LOG"
+fi
+echo ""

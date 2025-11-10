@@ -272,6 +272,8 @@ def generate_font(jp_style, eng_style, merged_style):
     # Nerd Fontのグリフを追加する
     if options.get("nerd-font"):
         add_nerd_font_glyphs(jp_font, eng_font)
+        # Nerd Fonts 병합 후 한글 bearing 재조정 (겹침 방지)
+        fix_korean_bearing_after_merge(jp_font)
 
     # オプション毎の修飾子を追加する
     variant = f"{WIDTH_35_STR} " if options.get("35") else ""
@@ -833,6 +835,29 @@ def transform_half_width(jp_font, eng_font):
             offset = (target_width - actual_width) / 2 - bbox[0]
             glyph.transform(psMat.translate(offset, 0))
             glyph.width = target_width
+
+
+def fix_korean_bearing_after_merge(jp_font):
+    """Nerd Fonts 병합 후 한글 그리프 bearing 재조정
+
+    mergeFonts() 호출 시 FontForge가 그리프를 재정렬하면서
+    한글의 bbox 기반 중앙 정렬이 손상되어 겹침 현상이 발생함.
+    이 함수는 한글 범위에 대해 bearing을 재조정하여 문제를 해결함.
+    """
+    # 전각 폭 확인 (일본어 히라가나 'あ'의 폭 × 2)
+    target_width = jp_font[0x3042].width
+
+    for glyph in jp_font.glyphs():
+        # 한글 음절 (가-힣) + 한글 자모 (ㄱ-ㆎ) 범위만 처리
+        if (0xAC00 <= glyph.unicode <= 0xD7A3 or
+            0x3131 <= glyph.unicode <= 0x318E):
+            if glyph.width == target_width:
+                # bbox 기반 중앙 정렬 재적용
+                bbox = glyph.boundingBox()
+                actual_width = bbox[2] - bbox[0]
+                offset = (target_width - actual_width) / 2 - bbox[0]
+                glyph.transform(psMat.translate(offset, 0))
+                glyph.width = target_width
 
 
 def make_box_drawing_full_width(eng_font, jp_font):
