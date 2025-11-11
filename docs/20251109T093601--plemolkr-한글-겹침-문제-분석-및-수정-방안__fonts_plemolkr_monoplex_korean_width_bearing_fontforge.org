@@ -994,16 +994,214 @@ pip install fonttools ttfautohint-py
    - PR 설명 작성
    - 스크린샷 첨부
 
+** Phase 5: Nerd Fonts 빌드 한글 겹침 완전 해결 (2025-11-11)
+
+*** 문제 재발견
+
+Nerd Fonts 빌드에서 한글 겹침이 다시 발생했습니다:
+- *증상*: =build/nerd/GLG-MonoConsoleNF-*.ttf= 에서만 한글 겹침 발생
+- *정상*: =build/GLG-MonoConsole-*.ttf= (non-NF)는 겹침 없음
+- *사용자 피드백*: "nerd 폰트로 테스트하면 겹침현상 발생해. nerd 반영 안한 폰트는 잘 작동하고"
+
+*** 근본 원인 분석
+
+*FontForge의 mergeFonts() 부작용*:
+1. =fontforge_script.py:1115= 의 =jp_font.mergeFonts(nerd_font)= 호출
+2. FontForge가 내부적으로 그리프를 재정렬 (glyph reordering)
+3. 한글 그리프의 bbox 기반 중앙 정렬이 손상됨
+4. 결과: 단순 translate로 복원되어 겹침 재발
+
+#+BEGIN_SRC python
+# 문제의 원인 (fontforge_script.py:1115)
+def add_nerd_font_glyphs(jp_font, eng_font):
+    # ...
+    jp_font.mergeFonts(nerd_font)  # ← 이 시점에 한글 bearing 손상!
+    # ...
+#+END_SRC
+
+*** 해결 방안
+
+*fix_korean_bearing_after_merge() 함수 추가*:
+
+#+BEGIN_SRC python
+# fontforge_script.py:838-858
+def fix_korean_bearing_after_merge(jp_font):
+    """Nerd Fonts 병합 후 한글 그리프 bearing 재조정
+
+    mergeFonts() 호출 시 FontForge가 그리프를 재정렬하면서
+    한글의 bbox 기반 중앙 정렬이 손상되어 겹침 현상이 발생함.
+    이 함수는 한글 범위에 대해 bearing을 재조정하여 문제를 해결함.
+    """
+    # 전각 폭 확인 (일본어 히라가나 'あ'의 폭 × 2)
+    target_width = jp_font[0x3042].width
+
+    for glyph in jp_font.glyphs():
+        # 한글 음절 (가-힣) + 한글 자모 (ㄱ-ㆎ) 범위만 처리
+        if (0xAC00 <= glyph.unicode <= 0xD7A3 or
+            0x3131 <= glyph.unicode <= 0x318E):
+            if glyph.width == target_width:
+                # bbox 기반 중앙 정렬 재적용
+                bbox = glyph.boundingBox()
+                actual_width = bbox[2] - bbox[0]
+                offset = (target_width - actual_width) / 2 - bbox[0]
+                glyph.transform(psMat.translate(offset, 0))
+                glyph.width = target_width
+#+END_SRC
+
+*호출 위치* (fontforge_script.py:273-276):
+
+#+BEGIN_SRC python
+if options.get("nerd-font"):
+    add_nerd_font_glyphs(jp_font, eng_font)
+    # Nerd Fonts 병합 후 한글 bearing 재조정 (겹침 방지)
+    fix_korean_bearing_after_merge(jp_font)
+#+END_SRC
+
+*** 검증 결과
+
+*자동 검증 스크립트* (test_korean_bearing_nf.py):
+
+#+BEGIN_EXAMPLE
+==================================================================
+Nerd Fonts 빌드 한글 Bearing 검증
+==================================================================
+
+============================================================
+Non-NF (기본): build/GLG-MonoConsole-Regular.ttf
+============================================================
+Target width (전각): 1056
+
+Char   Unicode    Width    LSB      RSB      Actual   Status
+----------------------------------------------------------------------
+가     U+AC00     1056     82.0     82.0     892.0    ✓ OK
+각     U+AC01     1056     82.0     82.0     892.0    ✓ OK
+나     U+B098     1056     82.0     82.0     892.0    ✓ OK
+다     U+B2E4     1056     82.0     82.0     892.0    ✓ OK
+라     U+B77C     1056     82.0     82.0     892.0    ✓ OK
+하     U+D558     1056     82.0     82.0     892.0    ✓ OK
+힣     U+D7A3     1056     82.0     82.0     892.0    ✓ OK
+
+============================================================
+NF (Nerd Fonts): build/GLG-MonoConsoleNF-Regular.ttf
+============================================================
+Target width (전각): 1056
+
+Char   Unicode    Width    LSB      RSB      Actual   Status
+----------------------------------------------------------------------
+가     U+AC00     1056     82.0     82.0     892.0    ✓ OK
+각     U+AC01     1056     82.0     82.0     892.0    ✓ OK
+나     U+B098     1056     82.0     82.0     892.0    ✓ OK
+다     U+B2E4     1056     82.0     82.0     892.0    ✓ OK
+라     U+B77C     1056     82.0     82.0     892.0    ✓ OK
+하     U+D558     1056     82.0     82.0     892.0    ✓ OK
+힣     U+D7A3     1056     82.0     82.0     892.0    ✓ OK
+
+======================================================================
+비교 결과
+======================================================================
+가 (U+AC00): LSB 차이 0.0px, RSB 차이 0.0px - ✓ 일치
+각 (U+AC01): LSB 차이 0.0px, RSB 차이 0.0px - ✓ 일치
+나 (U+B098): LSB 차이 0.0px, RSB 차이 0.0px - ✓ 일치
+다 (U+B2E4): LSB 차이 0.0px, RSB 차이 0.0px - ✓ 일치
+라 (U+B77C): LSB 차이 0.0px, RSB 차이 0.0px - ✓ 일치
+하 (U+D558): LSB 차이 0.0px, RSB 차이 0.0px - ✓ 일치
+힣 (U+D7A3): LSB 차이 0.0px, RSB 차이 0.0px - ✓ 일치
+
+======================================================================
+✓ 모든 한글 글리프의 bearing이 일치합니다!
+  Nerd Fonts 병합 후에도 한글 겹침이 발생하지 않습니다.
+======================================================================
+#+END_EXAMPLE
+
+*** 추가 개선 사항
+
+*1. 빌드 스크립트 로그 분리* (build_with_taskfile.sh):
+
+#+BEGIN_SRC bash
+# Stage 2: FontForge
+echo "  (Progress: console output, Logs: $BUILD_LOG)"
+time task build:console 2>"$BUILD_LOG"
+
+# Stage 4: Nerd Fonts
+NERD_LOG="build/nerd_patch.log"
+echo "  (Progress: console output, Detailed logs: $NERD_LOG)"
+time task patch:nerd 2>"$NERD_LOG"
+#+END_SRC
+
+*2. Taskfile.yml 스트림 리다이렉션 수정*:
+
+#+BEGIN_SRC yaml
+# Before (blocks stderr redirection):
+"$font" 2>&1 | grep -v "^Copyright" | grep -v "^$" || true
+
+# After (allows proper redirection):
+"$font"
+#+END_SRC
+
+*3. Nerd Fonts Progress Bar 제거* (2025-11-11):
+
+#+BEGIN_SRC yaml
+# Taskfile.yml: --no-progressbars 옵션 추가
+fontforge --script FontPatcher/font-patcher \
+  --complete --careful --mono \
+  --no-progressbars \
+  --outputdir build/nerd/tmp \
+  "$font"
+#+END_SRC
+
+효과:
+- Progress bar 반복 제거 (╢████...╟ 100% × 8회/폰트)
+- 간결한 콘솔 출력: "🔧 패치 중..." → "✅ 완료"
+- 상세 로그: =build/nerd_patch.log= 에 모든 처리 내역 기록
+
+*** 커밋 히스토리
+
+#+BEGIN_EXAMPLE
+bb32f60 - Fix Korean glyph bearing after Nerd Fonts merge (2025-11-11)
+  - fix_korean_bearing_after_merge() 함수 추가
+  - 빌드 스크립트 로그 분리 개선
+  - test_korean_bearing_nf.py 검증 스크립트 추가
+
+3596222 - Replace verification scripts with complete Korean glyph validator (2025-11-10)
+  - verify_korean_complete.py: 통합 검증 스크립트
+  - 9/9 한글 글리프 변환 검증 (width, offset, bearing)
+
+57e1c55 - Apply bearing adjustment only to Korean glyph ranges (2025-11-09)
+  - 한글 범위만 bearing 조정 (0xAC00-0xD7A3, 0x3131-0x318E)
+
+c0dde57 - Fix Korean glyph bearing issue with bbox-based center alignment (2025-11-09)
+  - bbox 기반 중앙 정렬 알고리즘 개발
+  - offset = (target_width - actual_width) / 2 - bbox[0]
+#+END_EXAMPLE
+
+*** 최종 결론
+
+*✅ 문제 완전 해결*:
+1. *근본 원인*: FontForge mergeFonts()의 그리프 재정렬
+2. *해결책*: Nerd Fonts 병합 후 한글 bearing 재조정
+3. *검증 결과*: 0.0px 차이 (7/7 테스트 글리프 완벽 일치)
+4. *적용 범위*: NF/non-NF 빌드 모두 정상 작동
+
+*기술적 통찰*:
+- FontForge의 mergeFonts()는 단순 병합이 아닌 내부 재정렬 수행
+- 외부 조정(bearing, width)은 병합 후 손실될 수 있음
+- 해결: 병합 후 재조정 단계 필수 (fix_korean_bearing_after_merge)
+
+*프로젝트 상태*:
+- PlemolKR → GLG-Mono 전환 완료
+- 한글 겹침 문제 완전 해결 (Nerd Fonts 포함)
+- Emacs, VSCode, 터미널 모두 정상 동작 확인
+
 ---
 
 본 문서는 PlemolKR 폰트 개선 프로젝트의 기술 분석 문서입니다.
 수정 사항은 fix/korean-overlap 브랜치에서 진행됩니다.
 
 #+BEGIN_EXAMPLE
-Repository: /home/goqual/repos/gh/PlemolKR
-Branch: fix/korean-overlap
-Date: 2025-11-09
+Repository: /home/goqual/repos/gh/GLG-Mono (PlemolKR → GLG-Mono 전환)
+Branch: main
+Date: 2025-11-09 (시작) → 2025-11-11 (완료)
 Analyzer: Claude Code + junghanacs
-Last Update: Phase 4 완료 - Taskfile.yml 빌드 검증 및 2px 차이 원인 분석 완료
-Status: Emacs 테스트 및 PR 준비 대기
+Last Update: Phase 5 완료 - Nerd Fonts 빌드 한글 겹침 완전 해결
+Status: ✅ 해결 완료 (NF/non-NF 모두 검증)
 #+END_EXAMPLE

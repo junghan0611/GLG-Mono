@@ -107,34 +107,37 @@ tasks:
   # ============================================
 
   patch:nerd:
-    desc: GLG-MonoConsole 폰트에 Nerd Fonts 패치 → GLG-MonoConsole
+    desc: GLG-Mono 폰트에 Nerd Fonts 패치 → GLG-MonoNF
     silent: true
     cmds:
       - mkdir -p build/nerd
       - |
-        for font in build/GLG-MonoConsole-*.ttf; do
+        for font in build/GLG-Mono-*.ttf; do
           if [ ! -f "$font" ]; then
-            echo "❌ GLG-MonoConsole 폰트가 없습니다. 먼저 빌드를 실행하세요."
+            echo "❌ GLG-Mono 폰트가 없습니다. 먼저 빌드를 실행하세요."
             exit 1
           fi
-          variation=$(basename "$font" .ttf | sed 's/GLG-MonoConsole-//')
-          echo "🔧 패치 중: $font → GLG-MonoConsole-$variation.ttf"
+          variation=$(basename "$font" .ttf | sed 's/GLG-Mono-//')
+          echo "🔧 패치 중: $font → GLG-MonoNF-$variation.ttf"
           mkdir -p build/nerd/tmp
           fontforge --script FontPatcher/font-patcher \
             --complete --careful --mono \
+            --no-progressbars \
+            --quiet \
+            --makegroups 0 \
             --outputdir build/nerd/tmp \
             "$font"
-          # 생성된 파일을 원하는 이름으로 변경
-          mv build/nerd/tmp/*.ttf "build/nerd/GLG-MonoConsole-$variation.ttf" 2>/dev/null || \
+          # 생성된 파일을 원하는 이름으로 변경 (NF 접미사 추가)
+          mv build/nerd/tmp/*.ttf "build/nerd/GLG-MonoNF-$variation.ttf" 2>/dev/null || \
             echo "⚠️  $variation 처리 중 오류 발생"
           rm -rf build/nerd/tmp
         done
       - echo ""
-      - echo "✅ Nerd Fonts 패치 완료 (GLG-MonoConsole)"
-      - ls -lh build/nerd/GLG-MonoConsole-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
+      - echo "✅ Nerd Fonts 패치 완료 (GLG-MonoNF)"
+      - ls -lh build/nerd/GLG-MonoNF-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
 
   patch:nerd:wide:
-    desc: GLG-Mono35Console 폰트에 Nerd Fonts 패치 → GLG-Mono35Console
+    desc: GLG-Mono35Console 폰트에 Nerd Fonts 패치 → GLG-Mono35ConsoleNF
     silent: true
     cmds:
       - mkdir -p build/nerd
@@ -145,23 +148,26 @@ tasks:
             exit 1
           fi
           variation=$(basename "$font" .ttf | sed 's/GLG-Mono35Console-//')
-          echo "🔧 패치 중: $font → GLG-Mono35Console-$variation.ttf"
+          echo "🔧 패치 중: $font → GLG-Mono35ConsoleNF-$variation.ttf"
           mkdir -p build/nerd/tmp
           fontforge --script FontPatcher/font-patcher \
             --complete --careful --mono \
+            --no-progressbars \
+            --quiet \
+            --makegroups 0 \
             --outputdir build/nerd/tmp \
             "$font"
-          # 생성된 파일을 원하는 이름으로 변경
-          mv build/nerd/tmp/*.ttf "build/nerd/GLG-Mono35Console-$variation.ttf" 2>/dev/null || \
+          # 생성된 파일을 원하는 이름으로 변경 (NF 접미사 추가)
+          mv build/nerd/tmp/*.ttf "build/nerd/GLG-Mono35ConsoleNF-$variation.ttf" 2>/dev/null || \
             echo "⚠️  $variation 처리 중 오류 발생"
           rm -rf build/nerd/tmp
         done
       - echo ""
-      - echo "✅ Nerd Fonts 패치 완료 (GLG-Mono35Console)"
-      - ls -lh build/nerd/GLG-Mono35Console-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
+      - echo "✅ Nerd Fonts 패치 완료 (GLG-Mono35ConsoleNF)"
+      - ls -lh build/nerd/GLG-Mono35ConsoleNF-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
 
   patch:nerd:all:
-    desc: 모든 Console 폰트에 Nerd Fonts 패치 (GLG-MonoConsole + GLG-Mono35Console)
+    desc: 모든 Console 폰트에 Nerd Fonts 패치 (GLG-Mono + GLG-Mono35Console)
     cmds:
       - echo "🚀 전체 Nerd Fonts 패치 시작..."
       - task patch:nerd
@@ -248,7 +254,7 @@ tasks:
       - echo "✅ 빠른 Nerd Fonts 빌드 완료!"
       - echo ""
       - echo "📊 생성된 폰트 목록:"
-      - ls -lh build/GLG-MonoConsoleNF-*.ttf build/GLG-MonoConsoleNF35-*.ttf 2>/dev/null || echo "폰트를 찾을 수 없습니다"
+      - ls -lh build/GLG-MonoNF-*.ttf build/GLG-MonoNF35-*.ttf 2>/dev/null || echo "폰트를 찾을 수 없습니다"
 
   # ============================================
   # 유틸리티 태스크

@@ -1,0 +1,531 @@
+#+title:      IBM Plex Math 수학 기호 통합 검토
+#+date:       [2025-11-11 Mon 08:57]
+#+filetags:   :fonts:math:unicode:integration:
+#+identifier: 20251111T085753
+
+* IBM Plex Math 개요
+
+** 릴리스 정보
+- *버전*: v1.1.0
+- *출시일*: 2024-11-13 (최신!)
+- *다운로드*: https://github.com/IBM/plex/releases/tag/%40ibm/plex-math%401.1.0
+- *NPM 패키지*: =@ibm/plex-math=
+- *라이선스*: SIL Open Font License (OFL-1.1)
+- *저장소*: https://github.com/IBM/plex
+
+** 특징
+- *5,000+ 글리프*: 수학 기호 전체 커버
+- *형식*: OTF (OpenType Font)
+- *호환성*: IBM Plex Serif Regular와 디자인 매칭
+- *용도*: 학술 논문, 수식 문서 작성
+- *타겟 유저*: IBM 연구원, 수학자, 과학자
+- *시스템*: XeTeX, LuaTeX (unicode-math 패키지 지원)
+
+** 대안 폰트와 비교
+IBM Plex Math는 다음 폰트들의 현대적 대안:
+- STIX Fonts (Scientific and Technical Information eXchange)
+- Microsoft Cambria Math
+- Latin Modern Math
+- TeX Gyre Math 시리즈
+
+* 유니코드 커버리지
+
+IBM Plex Math가 지원하는 주요 유니코드 블록:
+
+** 1. Mathematical Operators (U+2200–U+22FF)
+- *글리프 수*: 256 symbols
+- *내용*: 논리, 집합, 미적분 연산자
+- *예시*:
+  - 논리: ∀ (for all), ∃ (exists), ∄ (not exists)
+  - 미적분: ∂ (partial), ∇ (nabla), ∫ (integral)
+  - 집합: ∈ (element of), ∉ (not element), ⊂ (subset), ∪ (union), ∩ (intersection)
+  - 대수: ∑ (sum), ∏ (product), √ (root)
+  - 관계: ≈ (approximately), ≠ (not equal), ≤ (less or equal), ≥ (greater or equal)
+  - 기타: ∞ (infinity), ∆ (delta), ∅ (empty set)
+
+** 2. Mathematical Alphanumeric Symbols (U+1D400–U+1D7FF)
+- *글리프 수*: 996 characters
+- *내용*: 다양한 스타일의 라틴/그리스 문자
+- *스타일 변형*:
+  - Bold: 𝐀 𝐁 𝐂 (U+1D400–U+1D419)
+  - Italic: 𝐴 𝐵 𝐶 (U+1D434–U+1D44D)
+  - Bold Italic: 𝑨 𝑩 𝑪 (U+1D468–U+1D481)
+  - Script: 𝒜 ℬ 𝒞 (U+1D49C–U+1D4B5)
+  - Bold Script: 𝓐 𝓑 𝓒 (U+1D4D0–U+1D4E9)
+  - Fraktur: 𝔄 𝔅 ℭ (U+1D504–U+1D51D)
+  - Double-struck (블랙보드 볼드): 𝔸 𝔹 ℂ (U+1D538–U+1D551)
+  - Sans-serif: 𝖠 𝖡 𝖢 (U+1D5A0–U+1D5B9)
+  - Monospace: 𝙰 𝙱 𝙲 (U+1D670–U+1D689)
+
+- *용도*: 수학적 개념 구분 (벡터, 행렬, 집합, 함수 공간 등)
+
+** 3. Supplemental Mathematical Operators (U+2A00–U+2AFF)
+- *글리프 수*: 256 symbols
+- *내용*: 확장 연산자, 적분, 합 기호
+- *예시*:
+  - 큰 연산자: ⨀ ⨁ ⨂ (dot, plus, times)
+  - 다중 적분: ⨌ ⨍ ⨎ (quadruple, finite, integral)
+  - 관계 연산자: ⩽ ⩾ ⪅ ⪆
+
+** 4. Miscellaneous Mathematical Symbols-A (U+27C0–U+27EF)
+- *내용*: 괄호, 각도, 기하학적 기호
+- *예시*: ⟨ ⟩ (angle brackets), ⟦ ⟧ (double brackets)
+
+** 5. Miscellaneous Mathematical Symbols-B (U+2980–U+29FF)
+- *내용*: 화살표, 관계 연산자
+- *예시*: ⦀ ⦁ ⦂ (dots), ⦃ ⦄ (curly brackets)
+
+** 6. Arrows (U+2190–U+21FF, U+2900–U+297F)
+- *내용*: 수학용 화살표 전체
+- *예시*:
+  - 기본: ← → ↑ ↓
+  - 쌍방향: ⇄ ⇆ ⇌
+  - 확장: ⟵ ⟶ ⟷
+  - 변형: ⤴ ⤵ ⤶ ⤷
+
+** 7. Greek and Coptic (U+0370–U+03FF)
+- *내용*: 그리스 문자 (수학 표기용)
+- *예시*: α β γ δ ε ζ η θ λ μ π σ φ ψ ω
+
+** 8. Letterlike Symbols (U+2100–U+214F)
+- *내용*: 수체계 및 특수 기호
+- *예시*:
+  - 수체계: ℂ (complex), ℕ (natural), ℚ (rational), ℝ (real), ℤ (integer)
+  - 특수: ℏ (h-bar), ℓ (script l), ℮ (estimated)
+
+** 전체 커버리지 요약
+#+BEGIN_EXAMPLE
+최소 6개 주요 블록 + 추가 블록:
+- U+2200–U+22FF   (Mathematical Operators)
+- U+27C0–U+27EF   (Misc Math Symbols-A)
+- U+2980–U+29FF   (Misc Math Symbols-B)
+- U+2A00–U+2AFF   (Supplemental Math Operators)
+- U+1D400–U+1D7FF (Mathematical Alphanumeric Symbols)
+- U+2190–U+21FF   (Arrows)
+- U+2900–U+297F   (Supplemental Arrows-B)
+- U+0370–U+03FF   (Greek and Coptic)
+- U+2100–U+214F   (Letterlike Symbols)
+
+총 5,000+ 글리프
+#+END_EXAMPLE
+
+* GLG-Mono 현재 유니코드 커버리지
+
+** 지원 범위
+- Latin (기본): ✅ IBM Plex Mono
+- Hangul (한글): ✅ IBM Plex Sans KR (11,172 syllables)
+- Hiragana/Katakana (일본어): ✅ IBM Plex Sans JP
+- Nerd Fonts (아이콘): ✅ SymbolsNerdFont
+- Mathematical Symbols: ⚠️ 일부만 (기본 연산자)
+
+** 누락된 수학 기호
+- Mathematical Alphanumeric Symbols: ❌ (스타일 변형 문자)
+- 확장 수학 연산자: ❌
+- 전문 수학 기호: ❌
+
+* GLG-Mono에 통합 시나리오
+
+** Option 1: 별도 폰트 유지 (추천)
+
+*** 전략
+- GLG-Mono: 코딩/터미널용 (현재 상태 유지)
+- IBM Plex Math: Emacs org-mode 문서용 (별도 설치)
+- Font fallback chain 설정
+
+*** 장점
+- 파일 크기 최적화 (각 용도에 맞는 크기)
+- 유지보수 부담 최소화
+- 사용자가 필요시에만 Math 설치
+
+*** 구현
+#+BEGIN_SRC emacs-lisp
+;; Emacs font configuration
+(set-face-attribute 'default nil
+                    :family "GLG-Mono Console"
+                    :height 120)
+
+;; Math symbols fallback
+(set-fontset-font t 'mathematical
+                  (font-spec :family "IBM Plex Math"))
+
+;; Greek letters fallback
+(set-fontset-font t 'greek
+                  (font-spec :family "IBM Plex Math"))
+#+END_SRC
+
+*** 배포 방식
+- GLG-Mono: 기본 릴리스 (코딩용)
+- IBM Plex Math: 선택적 다운로드 (문서 작성용)
+- README에 설치 가이드 추가
+
+** Option 2: Math 통합 빌드 (선택적)
+
+*** 전략
+- =GLG-MonoMath= 별도 variant 생성
+- 수학 논문 작성자용 특화 버전
+- 빌드 옵션: =--with-math=
+
+*** 장점
+- 단일 폰트로 모든 기호 커버
+- Org-mode 수식 표현 완벽 지원
+- 디지털가든 문서 품질 향상
+
+*** 단점
+- 파일 크기 급증 (5,000+ 글리프 추가)
+- 빌드 시간 증가
+- 폭 조정 복잡도 상승
+
+*** 구현 예시
+#+BEGIN_SRC python
+# fontforge_script.py에 추가
+MATH_FONT = "IBM-Plex-Math/IBMPlexMath-{style}.otf"
+
+def add_math_glyphs(jp_font, options):
+    """수학 기호 추가"""
+    if not options.get("math"):
+        return
+
+    math_font = fontforge.open(
+        f"{SOURCE_FONTS_DIR}/{MATH_FONT.format(style='Regular')}"
+    )
+    math_font.em = EM_ASCENT + EM_DESCENT
+
+    # Mathematical Operators 블록 (U+2200–U+22FF)
+    for code in range(0x2200, 0x22FF + 1):
+        if code in math_font:
+            copy_and_adjust_glyph(math_font, jp_font, code)
+
+    # Mathematical Alphanumeric Symbols 블록 (U+1D400–U+1D7FF)
+    for code in range(0x1D400, 0x1D7FF + 1):
+        if code in math_font:
+            copy_and_adjust_glyph(math_font, jp_font, code)
+
+    # Supplemental Mathematical Operators (U+2A00–U+2AFF)
+    for code in range(0x2A00, 0x2AFF + 1):
+        if code in math_font:
+            copy_and_adjust_glyph(math_font, jp_font, code)
+
+def copy_and_adjust_glyph(src_font, dst_font, unicode_code):
+    """글리프 복사 및 폭 조정"""
+    if unicode_code not in src_font:
+        return
+
+    glyph = src_font[unicode_code]
+    # Math 심볼은 대부분 proportional → monospace 변환 복잡
+    # 적절한 폭 조정 로직 필요
+    dst_font.selection.select(unicode_code)
+    dst_font.paste()
+#+END_SRC
+
+*** 빌드 명령
+#+BEGIN_SRC bash
+# Math 심볼 포함 빌드
+python fontforge_script.py --console --math
+
+# 빌드 스크립트
+./build_with_taskfile.sh --with-math
+
+# Taskfile
+task build:console:math
+#+END_SRC
+
+** Option 3: 필수 심볼만 선택적 추가 (실용적)
+
+*** 전략
+- 자주 사용하는 기본 연산자만 추가
+- 파일 크기 최소 증가 (약 100-200 글리프)
+- 일반 사용자 커버리지 충분
+
+*** 포함 기호 (우선순위)
+1. *기본 논리*: ∀ ∃ ∄ ∧ ∨ ¬
+2. *집합*: ∈ ∉ ⊂ ⊃ ∪ ∩ ∅
+3. *대수*: ∑ ∏ √ ∫ ∂ ∇
+4. *관계*: ≈ ≠ ≤ ≥ ≡ ∝
+5. *기타*: ∞ ∆ ℏ π α β γ λ μ σ
+
+*** 장점
+- 파일 크기 영향 미미 (~5% 증가)
+- Org-mode 기본 수식 커버
+- Markdown 일반 수식 지원
+
+*** 구현
+#+BEGIN_SRC python
+# 선택적 Math 심볼 세트
+ESSENTIAL_MATH_SYMBOLS = [
+    # Logic
+    0x2200,  # ∀ for all
+    0x2203,  # ∃ exists
+    0x2204,  # ∄ not exists
+    0x2227,  # ∧ logical and
+    0x2228,  # ∨ logical or
+    0x00AC,  # ¬ not sign
+
+    # Set theory
+    0x2208,  # ∈ element of
+    0x2209,  # ∉ not element of
+    0x2282,  # ⊂ subset
+    0x2283,  # ⊃ superset
+    0x222A,  # ∪ union
+    0x2229,  # ∩ intersection
+    0x2205,  # ∅ empty set
+
+    # Calculus
+    0x2211,  # ∑ sum
+    0x220F,  # ∏ product
+    0x221A,  # √ square root
+    0x222B,  # ∫ integral
+    0x2202,  # ∂ partial
+    0x2207,  # ∇ nabla
+
+    # Relations
+    0x2248,  # ≈ approximately
+    0x2260,  # ≠ not equal
+    0x2264,  # ≤ less or equal
+    0x2265,  # ≥ greater or equal
+    0x2261,  # ≡ identical
+    0x221D,  # ∝ proportional
+
+    # Misc
+    0x221E,  # ∞ infinity
+    0x0394,  # Δ delta (uppercase)
+    0x210F,  # ℏ h-bar
+
+    # Greek (lowercase)
+    0x03B1,  # α alpha
+    0x03B2,  # β beta
+    0x03B3,  # γ gamma
+    0x03BB,  # λ lambda
+    0x03BC,  # μ mu
+    0x03C0,  # π pi
+    0x03C3,  # σ sigma
+]
+
+def add_essential_math_glyphs(jp_font, math_font):
+    """필수 수학 기호만 추가"""
+    for code in ESSENTIAL_MATH_SYMBOLS:
+        if code in math_font:
+            copy_and_adjust_glyph(math_font, jp_font, code)
+#+END_SRC
+
+* 기술적 고려사항
+
+** 1. 폭(Width) 조정 문제
+
+*** 문제점
+- Math 심볼은 대부분 *proportional width* (가변폭)
+- GLG-Mono는 *fixed width* (고정폭) 요구
+- 1:2 ratio (528:1056) 또는 3:5 ratio (600:1000)
+
+*** 해결 방안
+#+BEGIN_SRC python
+def adjust_math_symbol_width(glyph, target_width):
+    """수학 기호 폭 조정"""
+    bbox = glyph.boundingBox()
+    actual_width = bbox[2] - bbox[0]
+
+    # 크기가 너무 작으면 스케일
+    if actual_width < target_width * 0.3:
+        scale = (target_width * 0.8) / actual_width
+        glyph.transform(psMat.scale(scale, scale))
+
+    # 중앙 정렬
+    bbox = glyph.boundingBox()
+    actual_width = bbox[2] - bbox[0]
+    offset = (target_width - actual_width) / 2 - bbox[0]
+    glyph.transform(psMat.translate(offset, 0))
+
+    # 폭 설정
+    glyph.width = target_width
+#+END_SRC
+
+*** 주의사항
+- 일부 심볼은 본래 디자인 의도가 wide (예: ⟺, ⟷)
+- 강제 축소 시 가독성 저하 가능
+- 반각/전각 분류 필요
+
+** 2. 파일 크기 증가
+
+*** 예상 크기
+- 현재 GLG-MonoConsole-Regular.ttf: ~1.5 MB
+- Math 전체 추가 시: ~3-4 MB (2-3배 증가)
+- 필수 심볼만: ~1.6 MB (약 7% 증가)
+
+*** 최적화 방안
+- TrueType hints 선택적 제거
+- 불필요한 테이블 제거
+- WOFF2 웹폰트 형식 고려
+
+** 3. 빌드 복잡도
+
+*** 추가 작업
+- IBM Plex Math 소스 다운로드 및 관리
+- Weight 매칭 (Math는 Single weight)
+- Italic 변형 생성 (Math는 Upright only)
+
+*** 의존성
+#+BEGIN_SRC bash
+# build.ini에 추가
+MATH_FONT = IBM-Plex-Math/IBMPlexMath-Regular.otf
+
+# 소스 디렉토리 구조
+source/
+├── IBM-Plex-Mono/
+├── IBM-Plex-Sans-KR/
+├── IBM-Plex-Math/       # 새로 추가
+│   └── IBMPlexMath-Regular.otf
+├── hack/
+└── nerd-fonts/
+#+END_SRC
+
+** 4. 스타일 일관성
+
+*** 문제
+- IBM Plex Math는 Serif 기반 디자인
+- GLG-Mono는 Mono/Sans 기반
+- 시각적 통일성 고려 필요
+
+*** 해결
+- Math 심볼은 중립적 디자인 (대부분 기하학적)
+- 수식 문맥에서는 자연스러움
+- 코드 내 사용 시에만 이질감 가능
+
+* 사용 사례 분석
+
+** 1. 코딩/터미널 (주 용도)
+- Math 심볼 사용 빈도: ⭐☆☆☆☆ (매우 낮음)
+- 필요한 기호: 기본 연산자 정도 (+, -, *, /, =, <, >)
+- 결론: Math 통합 불필요
+
+** 2. Org-mode 문서 작성
+- Math 심볼 사용 빈도: ⭐⭐⭐⭐☆ (높음)
+- 필요한 기호:
+  - 논리: ∀, ∃, ∧, ∨
+  - 집합: ∈, ⊂, ∪, ∩
+  - 대수: ∑, ∏, ∫, ∂
+- 결론: Fallback 폰트 설정 추천
+
+** 3. Markdown 수식
+- Math 심볼 사용 빈도: ⭐⭐⭐☆☆ (중간)
+- 필요한 기호: LaTeX inline math ($...$)
+- 결론: Fallback 폰트로 충분
+
+** 4. 학술 논문 작성
+- Math 심볼 사용 빈도: ⭐⭐⭐⭐⭐ (매우 높음)
+- 필요한 기호: 전체 Mathematical Alphanumeric Symbols
+- 결론: GLG-MonoMath variant 또는 IBM Plex Math 직접 사용
+
+** 5. 디지털가든 (notes.junghanacs.com)
+- Math 심볼 사용 빈도: ⭐⭐⭐☆☆ (중간)
+- 필요한 기호: 기본 수학 표기
+- 결론: 필수 심볼만 추가 또는 Fallback
+
+* 권장 사항
+
+** 1단계: 현재 상태 유지 (v1.0.0)
+- GLG-Mono: 코딩 최적화 (현재 상태)
+- 사용자가 필요시 IBM Plex Math 별도 설치
+- README에 Emacs 설정 가이드 추가
+
+** 2단계: 필수 심볼 추가 (v1.1.0 or v1.2.0)
+- Option 3 구현: 50-100개 필수 수학 기호
+- 파일 크기 영향 최소화 (~5-7% 증가)
+- Org-mode 기본 수식 커버리지 확보
+
+** 3단계: Math Variant 출시 (v2.0.0)
+- GLG-MonoMath 별도 릴리스
+- 학술 문서 작성자 타겟
+- 전체 5,000+ Math 글리프 포함
+
+** Emacs 설정 가이드 (README 추가)
+
+*** Font Fallback 설정
+#+BEGIN_SRC emacs-lisp
+;; GLG-Mono Console을 기본 폰트로 설정
+(set-face-attribute 'default nil
+                    :family "GLG-Mono Console"
+                    :height 120)
+
+;; IBM Plex Math를 수학 기호용 fallback으로 설정
+(set-fontset-font t 'mathematical
+                  (font-spec :family "IBM Plex Math"))
+
+;; 그리스 문자 fallback
+(set-fontset-font t 'greek
+                  (font-spec :family "IBM Plex Math"))
+
+;; Unicode 수학 블록 명시적 설정
+(dolist (range '((#x2200 . #x22FF)  ; Mathematical Operators
+                 (#x2A00 . #x2AFF)  ; Supplemental Math Operators
+                 (#x1D400 . #x1D7FF) ; Math Alphanumeric Symbols
+                 (#x27C0 . #x27EF)  ; Misc Math Symbols-A
+                 (#x2980 . #x29FF))) ; Misc Math Symbols-B
+  (set-fontset-font t range
+                    (font-spec :family "IBM Plex Math")))
+#+END_SRC
+
+*** IBM Plex Math 설치
+#+BEGIN_SRC bash
+# 다운로드
+cd /tmp
+wget https://github.com/IBM/plex/releases/download/%40ibm/plex-math%401.1.0/ibm-plex-math.zip
+
+# 압축 해제
+unzip ibm-plex-math.zip
+
+# 폰트 설치
+mkdir -p ~/.local/share/fonts/IBM-Plex-Math
+cp ibm-plex-math/*.otf ~/.local/share/fonts/IBM-Plex-Math/
+
+# 폰트 캐시 갱신
+fc-cache -fv
+
+# 확인
+fc-list | grep "IBM Plex Math"
+#+END_SRC
+
+* 다음 단계
+
+** 즉시 실행 가능
+1. [X] IBM Plex Math 조사 완료
+2. [ ] README에 Emacs 설정 가이드 추가
+3. [ ] GLG-Mono v1.0.0 릴리스 (현재 상태)
+
+** 중기 계획 (v1.1 or v1.2)
+1. [ ] 필수 수학 기호 50-100개 선정
+2. [ ] fontforge_script.py에 add_essential_math_glyphs() 구현
+3. [ ] 빌드 테스트 및 파일 크기 확인
+4. [ ] Org-mode 수식 렌더링 테스트
+
+** 장기 계획 (v2.0)
+1. [ ] GLG-MonoMath variant 설계
+2. [ ] IBM Plex Math 전체 통합 (5,000+ glyphs)
+3. [ ] 학술 문서 작성자 피드백 수집
+4. [ ] 최적화 및 성능 개선
+
+* 참고 자료
+
+** 공식 문서
+- IBM Plex 저장소: https://github.com/IBM/plex
+- IBM Plex Math 릴리스: https://github.com/IBM/plex/releases/tag/%40ibm/plex-math%401.1.0
+- NPM 패키지: https://www.npmjs.com/package/@ibm/plex-math
+
+** 유니코드 표준
+- Mathematical Operators: https://www.unicode.org/charts/PDF/U2200.pdf
+- Mathematical Alphanumeric Symbols: https://www.unicode.org/charts/PDF/U1D400.pdf
+- Wikipedia: https://en.wikipedia.org/wiki/Mathematical_operators_and_symbols_in_Unicode
+
+** 기술 문서
+- CTAN plex-otf: https://ctan.org/pkg/plex-otf
+- unicode-math package: LaTeX 수학 폰트 사용법
+
+* 메타데이터
+
+#+BEGIN_EXAMPLE
+Repository: /home/goqual/repos/gh/GLG-Mono
+Project: GLG-Mono (힣's Monospace Font)
+Version: v1.0.0 (current)
+Date: 2025-11-11
+Author: junghan0611
+Reviewer: Claude Code
+Status: 🔍 Research Complete - Awaiting Decision
+#+END_EXAMPLE

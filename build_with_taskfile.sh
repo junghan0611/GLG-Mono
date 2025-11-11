@@ -22,8 +22,8 @@ USAGE:
     ./build_with_taskfile.sh [OPTIONS]
 
 OPTIONS:
-    --with-35       Build both GLG-MonoConsole (1:2) and GLG-Mono35Console (3:5)
-                    Default: Only GLG-MonoConsole (16 fonts)
+    --with-35       Build both GLG-Mono (1:2) and GLG-Mono35Console (3:5)
+                    Default: Only GLG-Mono (16 fonts)
                     With this: Both variants (32 fonts total)
 
     --skip-nerd     Skip Nerd Fonts patching (faster for testing)
@@ -37,7 +37,7 @@ OPTIONS:
     --help          Show this help message
 
 EXAMPLES:
-    # Official release build (GLG-MonoConsole + Nerd Fonts, ~45 min)
+    # Official release build (GLG-Mono + Nerd Fonts, ~45 min)
     ./build_with_taskfile.sh
 
     # Full build (both ratios + Nerd Fonts, ~1.5 hours)
@@ -58,7 +58,7 @@ WORKFLOW:
     3. Full build:  ./build_with_taskfile.sh --with-35
 
 OUTPUT:
-    build/GLG-MonoConsole-*.ttf       - Basic fonts (1:2 ratio)
+    build/GLG-Mono-*.ttf       - Basic fonts (1:2 ratio)
     build/GLG-Mono35Console-*.ttf     - Wide fonts (3:5 ratio)
     build/nerd/GLG-Mono*Console-*.ttf - Nerd Fonts variants
 
@@ -152,9 +152,9 @@ if [ "$NERD_ONLY" = false ]; then
     echo "  (Progress: console output, Logs: $BUILD_LOG)"
     echo ""
 
-    echo "Building GLG-MonoConsole (1:2 ratio)..."
+    echo "Building GLG-Mono (1:2 ratio)..."
     time task build:console 2>"$BUILD_LOG"
-    echo "✅ GLG-MonoConsole fontforge complete"
+    echo "✅ GLG-Mono fontforge complete"
     echo ""
 
     if [ "$BUILD_35" = true ]; then
@@ -174,7 +174,7 @@ if [ "$NERD_ONLY" = false ]; then
         echo "Processing all Console variants..."
         time task polish 2>>"$BUILD_LOG"
     else
-        echo "Processing GLG-MonoConsole only..."
+        echo "Processing GLG-Mono only..."
         time task polish:variant VARIANT=Console 2>>"$BUILD_LOG"
     fi
     echo "✅ FontTools complete"
@@ -190,11 +190,11 @@ if [ "$NERD_ONLY" = false ]; then
 
     echo ""
     echo "Font count:"
-    CONSOLE_COUNT=$(ls build/GLG-MonoConsole-*.ttf 2>/dev/null | wc -l)
+    CONSOLE_COUNT=$(ls build/GLG-Mono-*.ttf 2>/dev/null | wc -l)
     CONSOLE35_COUNT=$(ls build/GLG-Mono35Console-*.ttf 2>/dev/null | wc -l)
     TOTAL_COUNT=$((CONSOLE_COUNT + CONSOLE35_COUNT))
 
-    echo "  GLG-MonoConsole:   $CONSOLE_COUNT fonts"
+    echo "  GLG-Mono:   $CONSOLE_COUNT fonts"
     if [ "$BUILD_35" = true ]; then
         echo "  GLG-Mono35Console: $CONSOLE35_COUNT fonts"
     fi
@@ -211,7 +211,7 @@ if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
     echo ""
 
     # Check if fonts exist
-    if [ ! -f "build/GLG-MonoConsole-Regular.ttf" ]; then
+    if [ ! -f "build/GLG-Mono-Regular.ttf" ]; then
         echo "❌ Error: Base fonts not found. Run without --nerd-only first."
         exit 1
     fi
@@ -227,11 +227,11 @@ if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
         # Run patch - stderr to log, stdout to console
         time task patch:nerd:all 2>"$NERD_LOG"
     else
-        echo "Starting Nerd Fonts patch for GLG-MonoConsole only..."
+        echo "Starting Nerd Fonts patch for GLG-Mono only..."
         echo "  (Progress: console output, Detailed logs: $NERD_LOG)"
         echo "  (Monitor in another terminal: tail -f $NERD_LOG)"
         echo ""
-        # Run patch for GLG-MonoConsole only
+        # Run patch for GLG-Mono only
         time task patch:nerd 2>"$NERD_LOG"
     fi
 
@@ -245,13 +245,13 @@ if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
     echo ""
 
     if [ -d "build/nerd" ]; then
-        NERD_CONSOLE_COUNT=$(ls build/nerd/GLG-MonoConsole-*.ttf 2>/dev/null | wc -l)
-        NERD_CONSOLE35_COUNT=$(ls build/nerd/GLG-Mono35Console-*.ttf 2>/dev/null | wc -l)
+        NERD_CONSOLE_COUNT=$(ls build/nerd/GLG-MonoNF-*.ttf 2>/dev/null | wc -l)
+        NERD_CONSOLE35_COUNT=$(ls build/nerd/GLG-Mono35ConsoleNF-*.ttf 2>/dev/null | wc -l)
         NERD_TOTAL_COUNT=$((NERD_CONSOLE_COUNT + NERD_CONSOLE35_COUNT))
 
         echo "Generated Nerd Fonts:"
-        echo "  GLG-MonoConsole NF:   $NERD_CONSOLE_COUNT fonts"
-        echo "  GLG-Mono35Console NF: $NERD_CONSOLE35_COUNT fonts"
+        echo "  GLG-MonoNF:    $NERD_CONSOLE_COUNT fonts"
+        echo "  GLG-Mono35ConsoleNF:  $NERD_CONSOLE35_COUNT fonts"
         echo "  Total:                $NERD_TOTAL_COUNT fonts"
         echo ""
 
@@ -282,12 +282,12 @@ if [ "$NERD_ONLY" = false ]; then
     if [ "$BUILD_35" = true ]; then
         echo "  Basic fonts:  build/GLG-Mono*Console-*.ttf (32 fonts)"
         if [ "$INCLUDE_NERD" = true ]; then
-            echo "  Nerd Fonts:   build/nerd/GLG-Mono*Console-*.ttf (32 fonts)"
+            echo "  Nerd Fonts:   build/nerd/GLG-Mono*ConsoleNF-*.ttf (32 fonts)"
         fi
     else
-        echo "  Basic fonts:  build/GLG-MonoConsole-*.ttf (16 fonts)"
+        echo "  Basic fonts:  build/GLG-Mono-*.ttf (16 fonts)"
         if [ "$INCLUDE_NERD" = true ]; then
-            echo "  Nerd Fonts:   build/nerd/GLG-MonoConsole-*.ttf (16 fonts)"
+            echo "  Nerd Fonts:   build/nerd/GLG-MonoNF-*.ttf (16 fonts)"
         fi
     fi
     echo ""
@@ -297,12 +297,12 @@ echo "📋 Next steps:"
 echo "  1. Verify fonts: task verify"
 if [ "$INCLUDE_NERD" = true ] || [ "$NERD_ONLY" = true ]; then
     echo "  2. Check Nerd Fonts: task verify:nerd"
-    echo "  3. Test in Emacs: build/nerd/GLG-MonoConsole-Regular.ttf"
+    echo "  3. Test in Emacs: build/nerd/GLG-MonoNF-Regular.ttf"
 else
-    echo "  2. Test in Emacs: build/GLG-MonoConsole-Regular.ttf"
+    echo "  2. Test in Emacs: build/GLG-Mono-Regular.ttf"
     echo "  3. (Optional) Add Nerd Fonts: ./build_with_taskfile.sh --nerd-only"
 fi
-echo "  4. Install fonts: cp build/GLG-Mono*Console-*.ttf ~/.local/share/fonts/"
+echo "  4. Install fonts: cp build/GLG-Mono*Console*.ttf ~/.local/share/fonts/"
 echo "  5. Refresh font cache: fc-cache -fv"
 echo ""
 

@@ -283,9 +283,13 @@ def fix_name_table(xml: ET, style: str, variant: str):
             parent.remove(element)
     
     # フォント名を生成 (fontforge_script.pyのedit_meta_dataと同じロジック)
+    # GLG-Mono (간결한 형식)
     font_family = NEW_FONT_NAME
     if variant != "":
-        font_family += f" {variant}".replace(" 35", "35")
+        # Console 제거, 35만 추가 (GLG-Mono, GLG-Mono 35)
+        if "35" in variant:
+            font_family += " 35"
+        # Console variant는 기본이므로 family name에 추가하지 않음
     
     if style == "Regular" or style == "Italic" or style == "Bold" or style == "BoldItalic":
         font_weight = style
