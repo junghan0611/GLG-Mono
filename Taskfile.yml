@@ -134,6 +134,10 @@ tasks:
         done
       - echo ""
       - echo "✅ Nerd Fonts 패치 완료 (GLG-MonoNF)"
+      - echo ""
+      - echo "🔧 후처리: 한글 bearing 재조정 중..."
+      - python fix_nf_korean_bearing.py --dir build/nerd
+      - echo ""
       - ls -lh build/nerd/GLG-MonoNF-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
 
   patch:nerd:wide:
@@ -164,6 +168,10 @@ tasks:
         done
       - echo ""
       - echo "✅ Nerd Fonts 패치 완료 (GLG-Mono35ConsoleNF)"
+      - echo ""
+      - echo "🔧 후처리: 한글 bearing 재조정 중..."
+      - python fix_nf_korean_bearing.py --dir build/nerd
+      - echo ""
       - ls -lh build/nerd/GLG-Mono35ConsoleNF-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
 
   patch:nerd:all:
@@ -391,6 +399,22 @@ tasks:
 
         font.close()
         "
+
+  verify:bearing:
+    desc: 한글 bearing 검증 (NF vs non-NF 비교)
+    cmds:
+      - |
+        if [ ! -f "build/GLG-Mono-Regular.ttf" ]; then
+          echo "❌ 기본 폰트가 없습니다. 먼저 빌드를 실행하세요: task build:console"
+          exit 1
+        fi
+        if [ ! -f "build/nerd/GLG-MonoNF-Regular.ttf" ]; then
+          echo "❌ Nerd Fonts 폰트가 없습니다. 먼저 패치를 실행하세요: task patch:nerd"
+          exit 1
+        fi
+        echo "🔍 한글 bearing 검증 (NF vs non-NF)"
+        echo ""
+        python test_korean_bearing_nf.py build/GLG-Mono-Regular.ttf build/nerd/GLG-MonoNF-Regular.ttf
 
   install:
     desc: 폰트를 시스템에 설치 (macOS)

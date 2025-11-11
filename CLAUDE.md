@@ -88,18 +88,23 @@ Each family: 16 fonts (8 weights × 2 styles)
 
 ## Build System
 
-### Two-Stage Build Process
+### Multi-Stage Build Process
 
 1. **Stage 1: FontForge** (`fontforge_script.py`)
    - Font merging and glyph manipulation
    - Width transformations
    - Italic generation (9° skew)
-   - Optional Nerd Fonts integration
+   - Optional Nerd Fonts integration (internal method)
 
 2. **Stage 2: FontTools** (`fonttools_script.py`)
    - ttfautohint application
    - Font table modifications
    - Final post-processing
+
+3. **Stage 3: Nerd Fonts Patching** (Optional, via FontPatcher)
+   - External Nerd Fonts patching with FontPatcher
+   - Post-processing: Korean glyph bearing fix (`fix_nf_korean_bearing.py`)
+   - Ensures Korean glyphs remain centered after merge
 
 ### Quick Start
 
@@ -138,9 +143,13 @@ task full               # Build + polish: default + 3:5
 task full:nerd          # Build + polish: Nerd Fonts
 
 # Nerd Fonts patching (using FontPatcher)
-task patch:nerd         # Patch GLG-MonoConsole
-task patch:nerd:wide    # Patch GLG-Mono35Console
+task patch:nerd         # Patch GLG-Mono → GLG-MonoNF (auto post-processing)
+task patch:nerd:wide    # Patch GLG-Mono35Console → GLG-Mono35ConsoleNF
 task patch:nerd:all     # Patch all Console variants
+
+# Verification
+task verify:nerd        # Verify Nerd Fonts icons
+task verify:bearing     # Verify Korean glyph bearing (NF vs non-NF)
 ```
 
 ### Build Options
@@ -185,6 +194,9 @@ task patch:nerd:all     # Patch all Console variants
 build.ini            - Build configuration
 fontforge_script.py  - Stage 1: Font merging
 fonttools_script.py  - Stage 2: Post-processing
+fix_nf_korean_bearing.py - Stage 3: NF post-processing
+test_korean_bearing_nf.py - Korean bearing verification
+verify_korean_complete.py - Complete Korean glyph validator
 Taskfile.yml         - Build automation
 shell.nix            - NixOS development environment
 build_with_taskfile.sh - Main build script
@@ -281,6 +293,15 @@ git push origin main
 - Glyphs 500-1000 → 1000 (full-width)
 - Final 1:2: 528:1056
 - Final 3:5: 600:1000
+
+**Korean Glyph Bearing (Overlap Fix):**
+- IBM Plex Sans KR glyphs have actual width 892px (not 1000px)
+- bbox-based center alignment: `offset = (target_width - actual_width) / 2 - bbox[0]`
+- Applied in `set_width_600_or_1000()` and `transform_half_width()`
+- **Critical**: Nerd Fonts patching requires post-processing
+  - FontForge's `mergeFonts()` corrupts bearing alignment
+  - `fix_nf_korean_bearing.py` re-applies center alignment
+  - Automatically executed by `task patch:nerd`
 
 ### Font Table Modifications
 

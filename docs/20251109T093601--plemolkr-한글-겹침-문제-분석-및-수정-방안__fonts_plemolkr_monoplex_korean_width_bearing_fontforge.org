@@ -1192,6 +1192,135 @@ c0dde57 - Fix Korean glyph bearing issue with bbox-based center alignment (2025-
 - 한글 겹침 문제 완전 해결 (Nerd Fonts 포함)
 - Emacs, VSCode, 터미널 모두 정상 동작 확인
 
+** Phase 6: FontPatcher 후처리 로직 분리 및 자동화 (2025-11-11)
+
+*** 배경: 두 가지 Nerd Fonts 방법
+
+GLG-Mono는 두 가지 Nerd Fonts 통합 방법을 지원합니다:
+
+*방법 1: 내부 병합* (fontforge_script.py =--nerd-font=):
+#+BEGIN_SRC bash
+# fontforge_script.py 내부에서 직접 병합
+python fontforge_script.py --console --nerd-font
+# ✓ fix_korean_bearing_after_merge() 자동 실행
+#+END_SRC
+
+*방법 2: 외부 패치* (FontPatcher - 공식 빌드 방법):
+#+BEGIN_SRC bash
+# 기본 폰트 빌드 → 외부 FontPatcher로 패치
+task build:console
+task patch:nerd  # FontPatcher 사용
+# ✗ Phase 5에서는 후처리 누락!
+#+END_SRC
+
+*** 문제 재발견
+
+공식 빌드 스크립트 (=build_with_taskfile.sh=)는 *방법 2*를 사용:
+- =task build:console= (--nerd-font 없음)
+- =task patch:nerd= (외부 FontPatcher)
+- *결과*: =fix_korean_bearing_after_merge()= 함수 실행 안 됨
+- *증상*: Nerd Fonts 버전에서만 한글 겹침 발생
+
+*** 해결 방안: 독립 후처리 스크립트
+
+*fix_nf_korean_bearing.py* - FontPatcher 후 자동 실행:
+
+#+BEGIN_SRC python
+#!/usr/bin/env python3
+"""
+Nerd Fonts 패치 후 한글 bearing 재조정 스크립트
+"""
+
+def fix_korean_bearing(font_path, verbose=False):
+    """한글 글리프 bearing 재조정"""
+    font = fontforge.open(font_path)
+
+    # 반각 폭 기준으로 전각 폭 계산
+    half_width = font[0x0030].width  # 숫자 '0'
+    target_width = half_width * 2
+
+    for glyph in font.glyphs():
+        # 한글 음절 (가-힣) + 한글 자모 (ㄱ-ㆎ) 범위만 처리
+        if (0xAC00 <= glyph.unicode <= 0xD7A3 or
+            0x3131 <= glyph.unicode <= 0x318E):
+            if glyph.width > half_width:  # 전각 글리프
+                # bbox 기반 중앙 정렬 재적용
+                bbox = glyph.boundingBox()
+                actual_width = bbox[2] - bbox[0]
+                offset = (target_width - actual_width) / 2 - bbox[0]
+                glyph.transform(psMat.translate(offset, 0))
+                glyph.width = target_width
+
+    font.generate(font_path)
+    font.close()
+#+END_SRC
+
+*** Taskfile.yml 통합
+
+#+BEGIN_SRC yaml
+patch:nerd:
+  desc: GLG-Mono 폰트에 Nerd Fonts 패치 → GLG-MonoNF
+  cmds:
+    # FontPatcher 실행
+    - fontforge --script FontPatcher/font-patcher ...
+
+    # 후처리: 한글 bearing 재조정 (자동!)
+    - echo "🔧 후처리: 한글 bearing 재조정 중..."
+    - python fix_nf_korean_bearing.py --dir build/nerd
+
+verify:bearing:
+  desc: 한글 bearing 검증 (NF vs non-NF 비교)
+  cmds:
+    - python test_korean_bearing_nf.py \
+        build/GLG-Mono-Regular.ttf \
+        build/nerd/GLG-MonoNF-Regular.ttf
+#+END_SRC
+
+*** 설계 원칙
+
+*1. 자동화*:
+- =task patch:nerd= 실행 시 자동으로 bearing 수정
+- 사용자가 별도 작업 불필요
+
+*2. 확장성*:
+- 독립 스크립트로 분리되어 다른 유니코드 범위 처리 가능
+- =fix_unicode_range()= 함수로 Math symbols, Emoji 등 추가 예정
+- 향후 유니코드 후처리 로드맵 참조: [[file:20251111T120000--unicode-후처리-로드맵__fonts_unicode_height_alignment.org]]
+
+*3. 디버깅*:
+- 독립 실행 가능: =python fix_nf_korean_bearing.py --verbose=
+- 상세 로그 출력으로 문제 추적 용이
+
+*4. 검증*:
+- =task verify:bearing= 으로 간편한 확인
+- CI/CD 파이프라인 통합 가능
+
+*** 커밋 히스토리
+
+#+BEGIN_EXAMPLE
+e887748 - Add Nerd Fonts post-processing to fix Korean glyph overlap (2025-11-11)
+  - fix_nf_korean_bearing.py: 독립 후처리 스크립트 (163 lines)
+  - Taskfile.yml: patch:nerd 자동화, verify:bearing 추가
+  - CLAUDE.md: Multi-stage build process 문서화
+
+2dfe5c4 - Simplify font naming and improve Nerd Fonts style preservation (2025-11-11)
+  - FontPatcher --makegroups 0 옵션 추가
+  - 폰트 네이밍 단순화: GLG-MonoConsole → GLG-Mono
+#+END_EXAMPLE
+
+*** 최종 결론
+
+*✅ 완전한 자동화 달성*:
+1. *문제*: 외부 FontPatcher 방식에서 후처리 누락
+2. *해결*: 독립 후처리 스크립트 (=fix_nf_korean_bearing.py=)
+3. *통합*: Taskfile.yml 자동 실행
+4. *검증*: =task verify:bearing= 으로 확인
+
+*향후 계획*:
+- Math symbols 높이 정규화 (Emacs 라인 정렬)
+- Emoji 크기 조정
+- 기타 유니코드 범위 후처리
+
 ---
 
 본 문서는 PlemolKR 폰트 개선 프로젝트의 기술 분석 문서입니다.
@@ -1202,6 +1331,6 @@ Repository: /home/goqual/repos/gh/GLG-Mono (PlemolKR → GLG-Mono 전환)
 Branch: main
 Date: 2025-11-09 (시작) → 2025-11-11 (완료)
 Analyzer: Claude Code + junghanacs
-Last Update: Phase 5 완료 - Nerd Fonts 빌드 한글 겹침 완전 해결
-Status: ✅ 해결 완료 (NF/non-NF 모두 검증)
+Last Update: Phase 6 완료 - FontPatcher 후처리 로직 분리 및 자동화
+Status: ✅ 해결 완료 (자동화된 후처리 포함)
 #+END_EXAMPLE
