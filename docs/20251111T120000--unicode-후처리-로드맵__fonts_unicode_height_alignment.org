@@ -1,0 +1,581 @@
+#+title:      Unicode 후처리 로드맵
+#+date:       [2025-11-11 Mon 12:00]
+#+filetags:   :fonts:unicode:height:alignment:
+#+identifier: 20251111T120000
+#+export_file_name: 20251111T120000.md
+
+* 문서 개요 :ROADMAP:
+
+본 문서는 GLG-Mono 폰트의 유니코드 범위별 후처리 전략을 정의합니다.
+
+** 작성 배경
+
+폰트 빌드 프로세스에서 다음과 같은 후처리가 필요합니다:
+
+1. *한글 bearing 수정* (완료, Phase 6)
+   - FontPatcher 후 bbox 기반 중앙 정렬 재적용
+
+2. *Math symbols 높이 정규화* (계획)
+   - Emacs 라인 정렬 문제 해결
+   - 수식 기호의 일관된 높이 설정
+
+3. *Emoji 크기 조정* (계획)
+   - 이모지가 너무 크거나 작은 문제 해결
+   - 전각 폭에 맞춰 크기 조정
+
+4. *기타 유니코드 범위* (계획)
+   - Box Drawing Characters
+   - Block Elements
+   - Geometric Shapes
+
+** 목표
+
+- *높이 일관성*: Emacs/VSCode 등 에디터에서 라인 높이 일관성 유지
+- *폭 일관성*: Monospace 특성 유지 (반각/전각 엄격 구분)
+- *자동화*: 빌드 프로세스에 통합되어 자동 실행
+- *검증 가능성*: 각 범위별 검증 스크립트 제공
+
+* 아키텍처 :DESIGN:
+
+** 후처리 스크립트 구조
+
+#+BEGIN_SRC
+fix_nf_korean_bearing.py       ← 현재 (한글 bearing)
+    ↓
+fix_unicode_postprocess.py     ← 통합 스크립트 (향후)
+    ├── fix_korean_bearing()   ← 기존 로직 통합
+    ├── fix_math_height()      ← Math symbols 높이 정규화
+    ├── fix_emoji_size()       ← Emoji 크기 조정
+    └── fix_unicode_range()    ← 범용 범위 처리 함수
+#+END_SRC
+
+** 설계 원칙
+
+*1. 모듈화*:
+- 각 유니코드 범위별 독립 함수
+- 재사용 가능한 유틸리티 함수
+
+*2. 확장성*:
+- 새로운 범위 추가 용이
+- 범위별 파라미터 설정 가능
+
+*3. 검증*:
+- 각 범위별 before/after 비교
+- 자동화된 regression test
+
+*4. 문서화*:
+- 각 함수의 목적과 알고리즘 명시
+- 유니코드 범위 참조 링크
+
+* 유니코드 범위별 로드맵 :TASKS:
+
+** [완료] Phase 1: 한글 Bearing 수정
+
+*** 상태: ✅ 완료 (2025-11-11)
+
+*** 범위
+- U+AC00-D7A3: Hangul Syllables (가-힣, 11,172자)
+- U+3131-318E: Hangul Compatibility Jamo (ㄱ-ㆎ, 94자)
+
+*** 문제
+- FontPatcher 후 bbox 기반 중앙 정렬 손상
+- 한글 텍스트가 우측으로 겹쳐 보임
+
+*** 해결
+#+BEGIN_SRC python
+def fix_korean_bearing(font_path, verbose=False):
+    """한글 글리프 bearing 재조정"""
+    font = fontforge.open(font_path)
+    half_width = font[0x0030].width
+    target_width = half_width * 2
+
+    for glyph in font.glyphs():
+        if (0xAC00 <= glyph.unicode <= 0xD7A3 or
+            0x3131 <= glyph.unicode <= 0x318E):
+            if glyph.width > half_width:
+                bbox = glyph.boundingBox()
+                actual_width = bbox[2] - bbox[0]
+                offset = (target_width - actual_width) / 2 - bbox[0]
+                glyph.transform(psMat.translate(offset, 0))
+                glyph.width = target_width
+
+    font.generate(font_path)
+    font.close()
+#+END_SRC
+
+*** 검증
+- =test_korean_bearing_nf.py=: NF vs non-NF 비교
+- =task verify:bearing=: 자동 검증
+
+** [계획] Phase 2: Math Symbols 높이 정규화
+
+*** 상태: 📋 계획 중
+
+*** 우선순위: 높음 (Emacs 라인 정렬 핵심)
+
+*** 범위
+- U+2200-22FF: Mathematical Operators (∀∃∈∉∑∏∫…)
+- U+2A00-2AFF: Supplemental Mathematical Operators
+- U+27C0-27EF: Miscellaneous Mathematical Symbols-A
+- U+2980-29FF: Miscellaneous Mathematical Symbols-B
+- U+1D400-1D7FF: Mathematical Alphanumeric Symbols
+
+*** 문제
+- 수식 기호의 높이가 불규칙
+- Emacs에서 수식이 포함된 라인의 높이가 늘어남
+- 라인 정렬이 깨져서 가독성 저하
+
+*** 원인
+- IBM Plex, Hack 등 소스 폰트의 높이 차이
+- 병합 과정에서 높이 정규화 미실시
+
+*** 목표
+- 모든 Math symbols의 높이를 EM_ASCENT (880) 이내로 제한
+- Descent는 EM_DESCENT (120) 이내로 제한
+- 비율 유지하면서 크기 조정
+
+*** 해결 방안
+
+#+BEGIN_SRC python
+def fix_math_height(font_path, verbose=False):
+    """Math symbols 높이 정규화
+
+    목표:
+    - ascent ≤ EM_ASCENT (880)
+    - descent ≤ EM_DESCENT (120)
+    - 비율 유지하면서 축소
+    """
+    font = fontforge.open(font_path)
+    EM_ASCENT = 880
+    EM_DESCENT = 120
+
+    math_ranges = [
+        (0x2200, 0x22FF, "Mathematical Operators"),
+        (0x2A00, 0x2AFF, "Supplemental Mathematical Operators"),
+        (0x27C0, 0x27EF, "Misc Math Symbols-A"),
+        (0x2980, 0x29FF, "Misc Math Symbols-B"),
+    ]
+
+    fixed_count = 0
+
+    for start, end, name in math_ranges:
+        for code in range(start, end + 1):
+            if code not in font:
+                continue
+
+            glyph = font[code]
+            bbox = glyph.boundingBox()
+
+            # bbox: (xmin, ymin, xmax, ymax)
+            glyph_ascent = bbox[3]
+            glyph_descent = abs(bbox[1]) if bbox[1] < 0 else 0
+
+            # 높이 초과 여부 확인
+            needs_scaling = False
+            scale_y = 1.0
+
+            if glyph_ascent > EM_ASCENT:
+                scale_y = min(scale_y, EM_ASCENT / glyph_ascent)
+                needs_scaling = True
+
+            if glyph_descent > EM_DESCENT:
+                scale_y = min(scale_y, EM_DESCENT / glyph_descent)
+                needs_scaling = True
+
+            if needs_scaling:
+                # 중심 기준으로 Y축 스케일링
+                center_y = (bbox[3] + bbox[1]) / 2
+                glyph.transform(psMat.translate(0, -center_y))
+                glyph.transform(psMat.scale(1, scale_y))
+                glyph.transform(psMat.translate(0, center_y))
+                fixed_count += 1
+
+                if verbose:
+                    print(f"  U+{code:04X} ({name}): scale_y={scale_y:.2f}")
+
+    font.generate(font_path)
+    font.close()
+
+    return fixed_count
+#+END_SRC
+
+*** 검증 방법
+- Emacs에서 Math 기호 포함 라인 테스트
+- =verify_math_height.py= 스크립트 작성
+- Before/After 높이 비교
+
+** [계획] Phase 3: Emoji 크기 조정
+
+*** 상태: 📋 계획 중
+
+*** 우선순위: 중간
+
+*** 범위
+- U+1F300-1F5FF: Miscellaneous Symbols and Pictographs
+- U+1F600-1F64F: Emoticons
+- U+1F680-1F6FF: Transport and Map Symbols
+- U+1F900-1F9FF: Supplemental Symbols and Pictographs
+- U+2600-26FF: Miscellaneous Symbols (일부 emoji)
+
+*** 문제
+- Emoji가 너무 크거나 작아서 불균형
+- 전각 폭을 넘어가는 경우 발생
+- 일부 emoji가 라인 높이를 증가시킴
+
+*** 목표
+- 모든 emoji를 전각 폭 (1056 또는 1000) 이내로 조정
+- 높이도 EM_ASCENT/DESCENT 이내로 제한
+- 종횡비 유지
+
+*** 해결 방안
+
+#+BEGIN_SRC python
+def fix_emoji_size(font_path, verbose=False):
+    """Emoji 크기 조정
+
+    목표:
+    - width ≤ full_width (1056 or 1000)
+    - height ≤ EM_ASCENT + EM_DESCENT (1000)
+    - 종횡비 유지
+    """
+    font = fontforge.open(font_path)
+    half_width = font[0x0030].width
+    full_width = half_width * 2
+    EM_ASCENT = 880
+    EM_DESCENT = 120
+    MAX_HEIGHT = EM_ASCENT + EM_DESCENT
+
+    emoji_ranges = [
+        (0x1F300, 0x1F5FF, "Misc Symbols and Pictographs"),
+        (0x1F600, 0x1F64F, "Emoticons"),
+        (0x1F680, 0x1F6FF, "Transport and Map"),
+        (0x1F900, 0x1F9FF, "Supplemental Symbols"),
+        (0x2600, 0x26FF, "Miscellaneous Symbols"),
+    ]
+
+    fixed_count = 0
+
+    for start, end, name in emoji_ranges:
+        for code in range(start, end + 1):
+            if code not in font:
+                continue
+
+            glyph = font[code]
+            bbox = glyph.boundingBox()
+
+            actual_width = bbox[2] - bbox[0]
+            actual_height = bbox[3] - bbox[1]
+
+            # 크기 초과 여부 확인
+            scale = 1.0
+
+            if actual_width > full_width:
+                scale = min(scale, full_width / actual_width)
+
+            if actual_height > MAX_HEIGHT:
+                scale = min(scale, MAX_HEIGHT / actual_height)
+
+            if scale < 1.0:
+                # 중심 기준으로 uniform 스케일링
+                center_x = (bbox[2] + bbox[0]) / 2
+                center_y = (bbox[3] + bbox[1]) / 2
+                glyph.transform(psMat.translate(-center_x, -center_y))
+                glyph.transform(psMat.scale(scale, scale))
+                glyph.transform(psMat.translate(center_x, center_y))
+
+                # 전각 폭 설정
+                glyph.width = full_width
+                fixed_count += 1
+
+                if verbose:
+                    print(f"  U+{code:04X} ({name}): scale={scale:.2f}")
+
+    font.generate(font_path)
+    font.close()
+
+    return fixed_count
+#+END_SRC
+
+*** 검증 방법
+- Emacs에서 emoji 포함 텍스트 테스트
+- =verify_emoji_size.py= 스크립트 작성
+
+** [계획] Phase 4: Box Drawing & Block Elements
+
+*** 상태: 📋 계획 중
+
+*** 우선순위: 낮음 (이미 처리됨 가능성 있음)
+
+*** 범위
+- U+2500-257F: Box Drawing (─│┌┐└┘├┤…)
+- U+2580-259F: Block Elements (▀▄█▌▐░▒▓…)
+
+*** 확인 필요
+- =make_box_drawing_full_width()= 함수가 이미 처리 중
+- 추가 후처리 필요 여부 검토
+
+** [계획] Phase 5: 기타 유니코드 범위
+
+*** 상태: 📋 계획 중
+
+*** 우선순위: 낮음
+
+*** 범위 (필요시 추가)
+- U+25A0-25FF: Geometric Shapes
+- U+2700-27BF: Dingbats
+- U+E000-F8FF: Private Use Area (Nerd Fonts 일부)
+
+* 통합 후처리 스크립트 :IMPLEMENTATION:
+
+** 최종 구조 (향후)
+
+#+BEGIN_SRC python
+#!/usr/bin/env python3
+"""
+fix_unicode_postprocess.py
+
+GLG-Mono 폰트의 유니코드 범위별 후처리 통합 스크립트
+Nerd Fonts 패치 후 또는 독립 실행 가능
+"""
+
+import fontforge
+import psMat
+import argparse
+
+def fix_korean_bearing(font, verbose=False):
+    """한글 bearing 재조정 (Phase 1)"""
+    # 기존 로직 통합
+    pass
+
+def fix_math_height(font, verbose=False):
+    """Math symbols 높이 정규화 (Phase 2)"""
+    # Phase 2 구현
+    pass
+
+def fix_emoji_size(font, verbose=False):
+    """Emoji 크기 조정 (Phase 3)"""
+    # Phase 3 구현
+    pass
+
+def fix_unicode_range(font, start, end, fix_func, verbose=False):
+    """범용 유니코드 범위 처리 함수"""
+    pass
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="GLG-Mono Unicode 후처리"
+    )
+    parser.add_argument("font_path", help="폰트 파일 경로")
+    parser.add_argument("--korean", action="store_true", help="한글 bearing 수정")
+    parser.add_argument("--math", action="store_true", help="Math symbols 높이 정규화")
+    parser.add_argument("--emoji", action="store_true", help="Emoji 크기 조정")
+    parser.add_argument("--all", action="store_true", help="모든 후처리 실행")
+    parser.add_argument("--verbose", action="store_true", help="상세 로그")
+
+    args = parser.parse_args()
+
+    font = fontforge.open(args.font_path)
+
+    if args.all or args.korean:
+        print("🔧 한글 bearing 재조정...")
+        fix_korean_bearing(font, args.verbose)
+
+    if args.all or args.math:
+        print("🔧 Math symbols 높이 정규화...")
+        fix_math_height(font, args.verbose)
+
+    if args.all or args.emoji:
+        print("🔧 Emoji 크기 조정...")
+        fix_emoji_size(font, args.verbose)
+
+    font.generate(args.font_path)
+    font.close()
+
+    print("✅ 후처리 완료!")
+
+if __name__ == "__main__":
+    main()
+#+END_SRC
+
+** Taskfile.yml 통합
+
+#+BEGIN_SRC yaml
+patch:nerd:
+  cmds:
+    # FontPatcher 실행
+    - fontforge --script FontPatcher/font-patcher ...
+
+    # 후처리: 모든 유니코드 범위
+    - echo "🔧 후처리: Unicode 정규화 중..."
+    - |
+      for font in build/nerd/*.ttf; do
+        python fix_unicode_postprocess.py "$font" --all
+      done
+
+verify:unicode:
+  desc: 모든 유니코드 범위 검증
+  cmds:
+    - task verify:bearing
+    - task verify:math
+    - task verify:emoji
+#+END_SRC
+
+* 높이 일관성 문제 (Emacs Line Height) :CRITICAL:
+
+** 문제 설명
+
+Emacs에서 폰트의 *높이가 일정하지 않으면* 라인 높이가 자동으로 조정됩니다:
+
+#+BEGIN_EXAMPLE
+Normal line (height: 16px)
+Line with ∫ (height: 20px)  ← Math symbol이 높아서 라인 전체가 늘어남
+Normal line (height: 16px)
+#+END_EXAMPLE
+
+*결과*:
+- 라인 정렬이 불규칙
+- 스크롤 시 가독성 저하
+- 시각적 일관성 손상
+
+** 해결 전략
+
+*1. 모든 글리프 높이 제한*:
+- ascent ≤ EM_ASCENT (880)
+- descent ≤ EM_DESCENT (120)
+
+*2. 우선순위 높은 범위*:
+- Math symbols (가장 높은 우선순위)
+- Emoji
+- Box Drawing
+
+*3. 검증*:
+- Emacs에서 실제 렌더링 테스트
+- 높이 통계 분석 스크립트
+
+** 검증 스크립트 예시
+
+#+BEGIN_SRC python
+#!/usr/bin/env python3
+"""
+verify_glyph_height.py
+
+모든 글리프의 높이를 분석하여 EM_ASCENT/DESCENT 초과 여부 확인
+"""
+
+import fontforge
+import sys
+
+def analyze_height(font_path):
+    font = fontforge.open(font_path)
+    EM_ASCENT = 880
+    EM_DESCENT = 120
+
+    violations = []
+
+    for glyph in font.glyphs():
+        if glyph.unicode == -1:
+            continue
+
+        bbox = glyph.boundingBox()
+        ascent = bbox[3]
+        descent = abs(bbox[1]) if bbox[1] < 0 else 0
+
+        if ascent > EM_ASCENT or descent > EM_DESCENT:
+            violations.append({
+                'code': glyph.unicode,
+                'char': chr(glyph.unicode),
+                'ascent': ascent,
+                'descent': descent,
+            })
+
+    # 결과 출력
+    if violations:
+        print(f"❌ {len(violations)}개 글리프가 높이 제한 초과:")
+        for v in violations[:20]:  # 처음 20개만
+            print(f"  U+{v['code']:04X} {v['char']}: "
+                  f"ascent={v['ascent']:.0f} (limit={EM_ASCENT}), "
+                  f"descent={v['descent']:.0f} (limit={EM_DESCENT})")
+    else:
+        print("✅ 모든 글리프가 높이 제한 이내")
+
+    font.close()
+    return len(violations)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python verify_glyph_height.py <font.ttf>")
+        sys.exit(1)
+
+    violations = analyze_height(sys.argv[1])
+    sys.exit(0 if violations == 0 else 1)
+#+END_SRC
+
+* 우선순위 및 일정 :SCHEDULE:
+
+** 우선순위
+
+| Phase | 범위 | 우선순위 | 이유 |
+|-------|------|----------|------|
+| Phase 1 | 한글 bearing | ✅ 완료 | 기본 기능 |
+| Phase 2 | Math symbols | 🔴 높음 | Emacs 라인 정렬 핵심 |
+| Phase 3 | Emoji | 🟡 중간 | 가독성 개선 |
+| Phase 4 | Box Drawing | 🟢 낮음 | 이미 처리됨 가능성 |
+| Phase 5 | 기타 | 🟢 낮음 | 필요시 추가 |
+
+** 일정 (예상)
+
+- [X] Phase 1: 2025-11-11 (완료)
+- [ ] Phase 2: 2025-11-12 ~ 2025-11-13 (2일)
+- [ ] Phase 3: 2025-11-14 ~ 2025-11-15 (2일)
+- [ ] Phase 4-5: 2025-11-16 이후 (필요시)
+
+* 참고 자료 :REFERENCES:
+
+** Unicode 범위
+
+- [[https://www.unicode.org/charts/][Unicode Character Code Charts]]
+- [[https://www.unicode.org/charts/PDF/U2200.pdf][Mathematical Operators (U+2200-22FF)]]
+- [[https://www.unicode.org/charts/PDF/U1F300.pdf][Miscellaneous Symbols and Pictographs]]
+
+** 관련 문서
+
+- [[file:20251109T093601--plemolkr-한글-겹침-문제-분석-및-수정-방안__fonts_plemolkr_monoplex_korean_width_bearing_fontforge.org][한글 겹침 문제 분석 및 수정 방안]]
+- [[file:../CLAUDE.md][CLAUDE.md - Build System]]
+- [[file:../fontforge_script.py][fontforge_script.py]]
+- [[file:../fix_nf_korean_bearing.py][fix_nf_korean_bearing.py]]
+
+** FontForge 문서
+
+- [[https://fontforge.org/docs/scripting/python.html][FontForge Python Scripting]]
+- [[https://fontforge.org/docs/scripting/python/fontforge.html#glyph][Glyph Methods]]
+- [[https://fontforge.org/docs/scripting/python/fontforge.html#psMat][psMat (Transformation Matrix)]]
+
+* 결론 :CONCLUSION:
+
+본 로드맵은 GLG-Mono 폰트의 품질을 향상시키기 위한 체계적인 계획입니다.
+
+** 핵심 원칙
+
+1. *높이 일관성*: Emacs 라인 정렬 보장
+2. *폭 일관성*: Monospace 특성 유지
+3. *자동화*: 빌드 프로세스 통합
+4. *검증*: 각 단계별 테스트
+
+** 기대 효과
+
+- ✅ 완벽한 Emacs 라인 정렬
+- ✅ 모든 유니코드 범위에서 일관된 렌더링
+- ✅ 자동화된 품질 보장
+- ✅ 확장 가능한 후처리 시스템
+
+---
+
+본 문서는 지속적으로 업데이트됩니다.
+새로운 유니코드 범위 처리가 필요하면 이 문서에 추가하세요.
+
+#+BEGIN_EXAMPLE
+Repository: GLG-Mono
+Author: junghanacs
+Date: 2025-11-11
+Status: 📋 로드맵 작성 완료, Phase 2 구현 대기
+#+END_EXAMPLE
