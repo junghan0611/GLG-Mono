@@ -132,10 +132,10 @@ tasks:
             echo "⚠️  $variation 처리 중 오류 발생"
           rm -rf build/nerd/tmp
         done
+        echo ""
+        echo "✅ Nerd Fonts 패치 완료 (GLG-MonoNF)"
       - echo ""
-      - echo "✅ Nerd Fonts 패치 완료 (GLG-MonoNF)"
-      - echo ""
-      - echo "🔧 후처리: 한글 bearing 재조정 중..."
+      - echo "🔧 후처리 한글 bearing 재조정 중..."
       - python fix_nf_korean_bearing.py --dir build/nerd
       - echo ""
       - ls -lh build/nerd/GLG-MonoNF-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"
@@ -166,10 +166,10 @@ tasks:
             echo "⚠️  $variation 처리 중 오류 발생"
           rm -rf build/nerd/tmp
         done
+        echo ""
+        echo "✅ Nerd Fonts 패치 완료 (GLG-Mono35ConsoleNF)"
       - echo ""
-      - echo "✅ Nerd Fonts 패치 완료 (GLG-Mono35ConsoleNF)"
-      - echo ""
-      - echo "🔧 후처리: 한글 bearing 재조정 중..."
+      - echo "후처리 한글 bearing 재조정 중..."
       - python fix_nf_korean_bearing.py --dir build/nerd
       - echo ""
       - ls -lh build/nerd/GLG-Mono35ConsoleNF-*.ttf 2>/dev/null || echo "생성된 폰트가 없습니다"

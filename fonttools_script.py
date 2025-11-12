@@ -131,7 +131,11 @@ def fix_font_tables(style, variant):
 
     input_font_name = f"{FONTTOOLS_PREFIX}{FONT_NAME}{variant}-{style}_merged.ttf"
     output_name_base = f"{FONTTOOLS_PREFIX}{FONT_NAME}{variant}-{style}"
-    completed_name_base = f"{NEW_FONT_NAME.replace(' ', '')}{variant}-{style}"
+
+    # variant에서 "Console" 제거 (GLG-Mono-Regular.ttf 형식)
+    # 35는 유지 (GLG-Mono35-Regular.ttf)
+    output_variant = variant.replace("Console", "")
+    completed_name_base = f"{NEW_FONT_NAME.replace(' ', '')}{output_variant}-{style}"
 
     # OS/2, post テーブルのみのttxファイルを出力
     xml = dump_ttx(input_font_name, output_name_base)
