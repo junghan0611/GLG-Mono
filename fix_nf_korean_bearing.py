@@ -58,12 +58,12 @@ def fix_korean_bearing(font_path, verbose=False):
             if (0xAC00 <= glyph.unicode <= 0xD7A3 or
                 0x3131 <= glyph.unicode <= 0x318E):
 
-                # 전각으로 추정되는 글리프만 처리 (width 조건 완화)
-                if glyph.width > half_width:
-                    # bbox 기반 중앙 정렬 재적용
-                    bbox = glyph.boundingBox()
-                    actual_width = bbox[2] - bbox[0]
+                # bbox 기반으로 전각 글리프 판단 (실제 글리프 크기가 반각보다 큰 경우)
+                bbox = glyph.boundingBox()
+                actual_width = bbox[2] - bbox[0]
 
+                # 실제 글리프가 반각보다 크거나, 이미 전각 폭으로 설정된 경우
+                if actual_width > half_width * 1.2 or glyph.width >= half_width:
                     # 현재 LSB/RSB 계산
                     current_lsb = bbox[0]
                     current_rsb = glyph.width - bbox[2]
