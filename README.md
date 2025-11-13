@@ -1,10 +1,15 @@
 # GLG-Mono
 
+[![Version](https://img.shields.io/github/v/release/junghan0611/GLG-Mono)](https://github.com/junghan0611/GLG-Mono/releases)
+[![License: OFL-1.1](https://img.shields.io/badge/License-OFL--1.1-blue.svg)](https://opensource.org/licenses/OFL-1.1)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > **Hih's Monospace Font for 8-Layer Ecosystem**
+> **v1.0.0** - First stable release with complete Korean glyph bearing adjustment
 
 GLG-Mono is a Korean programming font designed for knowledge management and AI collaboration. It merges IBM Plex Mono (English) with IBM Plex Sans KR (Korean) to provide comprehensive Unicode support in terminals and editors.
 
-[한글 문서](README-KO.md) | [Philosophy](docs/PHILOSOPHY.org)
+[한글 문서](README-KO.md) | [Philosophy](docs/PHILOSOPHY.org) | [Releases](https://github.com/junghan0611/GLG-Mono/releases)
 
 ## Name Origin
 
@@ -19,6 +24,12 @@ GLG-Mono is a Korean programming font designed for knowledge management and AI c
 - "힣 for everyone" - joyful writing for all
 
 For deeper philosophy and background, see [`docs/PHILOSOPHY.org`](docs/PHILOSOPHY.org).
+
+## Screenshot
+
+![GLG-Mono in action](docs/20251113T153802-screenshot.png)
+
+*GLG-Mono showcasing Korean glyph alignment, Nerd Fonts icons, and Unicode completeness in terminal environment*
 
 ## Key Features
 
@@ -59,35 +70,56 @@ Provides consistent typography across all layers with a single font.
 - **Console Mode**: Half-width display for arrows and other symbols
 - **Nerd Fonts Support**: Powerline symbols, devicons, and dev icons
 
-### 4. Technical Differentiation
-- **Korean Glyph Bearing Fix**: Precise rendering without overlap (LSB/RSB 0-2px)
-- **Web Font Support**: WOFF2 format for Digital Garden integration
-- **Full Set by Default**: Includes Normal, Console, 35, 35Console variants
-- **8 Weights**: Thin ~ Bold, each in Regular/Italic styles
+### 4. Technical Differentiation (v1.0.0)
+- **Korean Glyph Bearing Adjustment**: Precise center alignment after Nerd Fonts patching
+  - IBM Plex Sans KR glyphs have actual width 892px (not 1000px)
+  - Bbox-based center calculation: `offset = (target_width - actual_width) / 2 - bbox[0]`
+  - Applied to both base fonts and Nerd Fonts variants
+  - Prevents Korean glyph overlap in all rendering engines
+- **Nerd Fonts Post-Processing**: Automatic bearing fix after FontPatcher merge
+- **Web Font Support** (planned): WOFF2 format for Digital Garden integration
+- **Complete Variant Set**: GLG-Mono, GLG-Mono35 (3:5 ratio)
+- **8 Weights × 2 Styles**: Thin, ExtraLight, Light, Text, Regular, Medium, SemiBold, Bold
+- **Nerd Fonts Variants**: All variants available with NF suffix
 
-## Font Families
+## Font Families (v1.0.0)
 
-| Font Family | Width Ratio | Description |
-|------------|-------------|-------------|
-| **GLG-Mono** | Half 1:Full 2 | Standard version. IBM Plex Mono for ASCII, IBM Plex Sans for Korean/Japanese |
-| **GLG-Mono Console** | Half 1:Full 2 | Console-optimized. Half-width symbols (arrows, etc.). Recommended for terminals |
-| **GLG-Mono 35** | Half 3:Full 5 | Larger ASCII version. Better for English-heavy code |
-| **GLG-Mono 35 Console** | Half 3:Full 5 | Combines 35 ratio with Console mode |
+| Font Family | Width Ratio | Naming | Description |
+|------------|-------------|--------|-------------|
+| **GLG-Mono** | Half 1:Full 2 | `GLG-Mono-*.ttf` | Standard version (half-width: 528px, full-width: 1056px) |
+| **GLG-MonoNF** | Half 1:Full 2 | `GLG-MonoNF-*.ttf` | With Nerd Fonts icons (Powerline, Devicons) |
+| **GLG-Mono35** | Half 3:Full 5 | `GLG-Mono35-*.ttf` | Wider half-width (600px, full-width: 1000px) |
+| **GLG-Mono35NF** | Half 3:Full 5 | `GLG-Mono35NF-*.ttf` | 3:5 ratio with Nerd Fonts |
 
-### Optional Variants
-- **NF** suffix: Includes Nerd Fonts (e.g., GLG-MonoConsoleNF)
-- **HS** suffix: Hidden full-width Space (disables visualization)
+### Variant Details
+- **All variants** include Console mode optimization (half-width arrows/symbols)
+- **NF suffix**: Adds 3,000+ Nerd Fonts glyphs with proper bearing alignment
+- **16 fonts per family**: 8 weights (Thin ~ Bold) × 2 styles (Regular, Italic)
+- **Total**: 64 fonts across all variants
 
-Each family provides 16 files (8 weights × 2 styles).
+### Font Selection Guide
+- **Terminal use**: `GLG-MonoNF` (recommended for most users)
+- **English-heavy code**: `GLG-Mono35NF` (wider half-width characters)
+- **Without icons**: `GLG-Mono` or `GLG-Mono35` (smaller file size)
+
+**Note**: "Console" is no longer part of the filename as all variants include console mode by default.
 
 ## Download & Installation
 
 ### Download from Releases
-Select your preferred variant from the Assets section of the release page:
 
-- `GLG-Mono_vx.x.x.zip` - Standard version
-- `GLG-Mono_NF_vx.x.x.zip` - With Nerd Fonts
-- `GLG-Mono_HS_vx.x.x.zip` - Hidden full-width space
+Visit the [Releases](https://github.com/junghan0611/GLG-Mono/releases) page and download your preferred variant:
+
+**v1.0.0 Assets:**
+- `GLG-Mono_v1.0.0.zip` - Standard fonts (GLG-Mono + GLG-Mono35, 32 fonts)
+- `GLG-MonoNF_v1.0.0.zip` - With Nerd Fonts (GLG-MonoNF + GLG-Mono35NF, 32 fonts)
+- `GLG-Mono_All_v1.0.0.zip` - Complete set (all 64 fonts)
+
+**What's included in v1.0.0:**
+- ✅ Korean glyph bearing adjustment (proper center alignment)
+- ✅ Nerd Fonts post-processing (3,000+ icons with correct spacing)
+- ✅ All weights and styles (Thin ~ Bold, Regular + Italic)
+- ✅ Both width ratios (1:2 and 3:5)
 
 ### Installation
 

@@ -1,8 +1,15 @@
 # GLG-Mono
 
+[![Version](https://img.shields.io/github/v/release/junghan0611/GLG-Mono)](https://github.com/junghan0611/GLG-Mono/releases)
+[![License: OFL-1.1](https://img.shields.io/badge/License-OFL--1.1-blue.svg)](https://opensource.org/licenses/OFL-1.1)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > **힣's Monospace Font for 8-Layer Ecosystem**
+> **v1.0.0** - 한글 글리프 베어링 조정이 완료된 첫 안정 버전
 
 GLG-Mono는 지식 관리와 AI 협업을 위한 한글 프로그래밍 폰트입니다. IBM Plex Mono(영문)와 IBM Plex Sans KR(한글)을 결합하여, 터미널과 에디터에서 완벽한 유니코드 지원을 제공합니다.
+
+[English](README.md) | [철학](docs/PHILOSOPHY.org) | [릴리스](https://github.com/junghan0611/GLG-Mono/releases)
 
 ## 이름의 의미
 
@@ -17,6 +24,12 @@ GLG-Mono는 지식 관리와 AI 협업을 위한 한글 프로그래밍 폰트�
 - 모두의 힣 - 웃는 얼굴로 글쓰기
 
 자세한 철학과 배경은 [`docs/PHILOSOPHY.org`](docs/PHILOSOPHY.org)를 참조하세요.
+
+## 스크린샷
+
+![GLG-Mono 실제 사용 모습](docs/20251113T153802-screenshot.png)
+
+*터미널 환경에서 GLG-Mono의 한글 글리프 정렬, Nerd Fonts 아이콘, 유니코드 완전성을 보여주는 화면*
 
 ## 주요 특징
 
@@ -57,35 +70,56 @@ Layer 1: Infrastructure        → nixos-config
 - **Console 모드**: 화살표 등 기호를 반각으로 표시
 - **Nerd Fonts 지원**: Powerline 기호, devicons 등 개발 아이콘
 
-### 4. 기술적 차별화
-- **한글 글리프 베어링 수정**: 겹침 없는 정확한 렌더링 (LSB/RSB 0-2px)
-- **웹폰트 지원**: WOFF2 포맷으로 Digital Garden 통합
-- **전체 세트 기본 제공**: Normal, Console, 35, 35Console 모두 포함
-- **8가지 웨이트**: Thin ~ Bold, 각각 Regular/Italic
+### 4. 기술적 차별화 (v1.0.0)
+- **한글 글리프 베어링 조정**: Nerd Fonts 패치 후 정확한 중앙 정렬
+  - IBM Plex Sans KR 글리프 실제 폭은 892px (1000px 아님)
+  - Bbox 기반 중앙 계산: `offset = (target_width - actual_width) / 2 - bbox[0]`
+  - 기본 폰트와 Nerd Fonts 변형 모두 적용
+  - 모든 렌더링 엔진에서 한글 글리프 겹침 방지
+- **Nerd Fonts 후처리**: FontPatcher 병합 후 자동 베어링 수정
+- **웹폰트 지원** (예정): WOFF2 포맷으로 Digital Garden 통합
+- **완전한 변형 세트**: GLG-Mono, GLG-Mono35 (3:5 비율)
+- **8 웨이트 × 2 스타일**: Thin, ExtraLight, Light, Text, Regular, Medium, SemiBold, Bold
+- **Nerd Fonts 변형**: 모든 변형에 NF 접미사 버전 제공
 
-## 폰트 패밀리
+## 폰트 패밀리 (v1.0.0)
 
-| 폰트 패밀리 | 문자 폭 비율 | 설명 |
-|------------|-------------|------|
-| **GLG-Mono** | 반각 1:전각 2 | 표준 버전. ASCII는 IBM Plex Mono, 한글/일본어는 IBM Plex Sans 사용 |
-| **GLG-Mono Console** | 반각 1:전각 2 | 콘솔 최적화. 화살표 등 기호를 반각으로 표시. 터미널 환경 추천 |
-| **GLG-Mono 35** | 반각 3:전각 5 | 영문 확대 버전. 영문이 많은 코드에 적합 |
-| **GLG-Mono 35 Console** | 반각 3:전각 5 | 35 + 콘솔 모드 조합 |
+| 폰트 패밀리 | 문자 폭 비율 | 파일명 | 설명 |
+|------------|-------------|--------|------|
+| **GLG-Mono** | 반각 1:전각 2 | `GLG-Mono-*.ttf` | 표준 버전 (반각: 528px, 전각: 1056px) |
+| **GLG-MonoNF** | 반각 1:전각 2 | `GLG-MonoNF-*.ttf` | Nerd Fonts 아이콘 포함 (Powerline, Devicons) |
+| **GLG-Mono35** | 반각 3:전각 5 | `GLG-Mono35-*.ttf` | 넓은 반각 (600px, 전각: 1000px) |
+| **GLG-Mono35NF** | 반각 3:전각 5 | `GLG-Mono35NF-*.ttf` | 3:5 비율 + Nerd Fonts |
 
-### 옵션 변형
-- **NF** 접미사: Nerd Fonts 포함 (예: GLG-MonoConsoleNF)
-- **HS** 접미사: 전각 공백 가시화 해제 (Hidden Space)
+### 변형 세부사항
+- **모든 변형**에 Console 모드 최적화 포함 (반각 화살표/기호)
+- **NF 접미사**: 3,000개 이상의 Nerd Fonts 글리프 추가 (올바른 베어링 정렬)
+- **패밀리당 16개 폰트**: 8 웨이트 (Thin ~ Bold) × 2 스타일 (Regular, Italic)
+- **전체**: 모든 변형 합쳐 64개 폰트
 
-각 패밀리당 16개 파일 (8 웨이트 × 2 스타일) 제공.
+### 폰트 선택 가이드
+- **터미널 사용**: `GLG-MonoNF` (대부분 사용자에게 권장)
+- **영문 위주 코드**: `GLG-Mono35NF` (넓은 반각 문자)
+- **아이콘 불필요**: `GLG-Mono` 또는 `GLG-Mono35` (작은 파일 크기)
+
+**참고**: "Console"은 더 이상 파일명에 포함되지 않습니다. 모든 변형이 기본적으로 콘솔 모드를 포함합니다.
 
 ## 다운로드 및 설치
 
 ### 릴리스에서 다운로드
-릴리스 페이지의 Assets에서 원하는 버전을 선택하세요:
 
-- `GLG-Mono_vx.x.x.zip` - 기본 버전
-- `GLG-Mono_NF_vx.x.x.zip` - Nerd Fonts 포함
-- `GLG-Mono_HS_vx.x.x.zip` - 전각 공백 가시화 해제
+[릴리스](https://github.com/junghan0611/GLG-Mono/releases) 페이지에서 원하는 변형을 다운로드하세요:
+
+**v1.0.0 Assets:**
+- `GLG-Mono_v1.0.0.zip` - 기본 폰트 (GLG-Mono + GLG-Mono35, 32개 폰트)
+- `GLG-MonoNF_v1.0.0.zip` - Nerd Fonts 포함 (GLG-MonoNF + GLG-Mono35NF, 32개 폰트)
+- `GLG-Mono_All_v1.0.0.zip` - 전체 세트 (64개 폰트 모두)
+
+**v1.0.0에 포함된 기능:**
+- ✅ 한글 글리프 베어링 조정 (정확한 중앙 정렬)
+- ✅ Nerd Fonts 후처리 (3,000개 이상 아이콘, 올바른 간격)
+- ✅ 모든 웨이트와 스타일 (Thin ~ Bold, Regular + Italic)
+- ✅ 양쪽 비율 (1:2 및 3:5)
 
 ### 설치 방법
 
