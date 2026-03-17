@@ -9,3 +9,4 @@ __pycache__/
 *__human.org
 .claude/
 .vscode/
+nerd_patch.log
