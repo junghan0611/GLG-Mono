@@ -11,18 +11,24 @@ Boot sector for the next session. Durable rules live in `AGENTS.md`; design deta
 - **Proof**: `task web:all` is green across all four faces; `task web:test-gates` plants fourteen
   defects and catches all fourteen. The full verifier compares shipped layout rules, thousands of
   HarfBuzz strings and all thirteen distribution files deterministically.
-- **Delivery**: `~/repos/gh/notes` now owns a deterministic `scripts/sync-webfonts.sh` that copies
-  the verified distribution and generates `/static/fonts/` URLs. GLG has visually confirmed the
-  local garden. The notes-side performance evaluation is still running and may return requirements.
+- **Delivery**: `~/repos/gh/notes` owns a deterministic `scripts/sync-webfonts.sh`; GLG visually
+  confirmed the local garden. The integration remains uncommitted while its performance evaluation
+  finishes.
+- **Provisional measurement**: a page with no Han requests **1,072 KB** as intended, but one Han
+  character pulls an entire ~2 MB `jp` face. The current homepage (`脈`) measured **3,031 KB**; a
+  sparse-Han note (`如`) measured **5,556 KB**. 263/2,245 notes contain Han and 167 of those contain
+  five or fewer. The eight-file contract therefore wins broadly but misses the sparse-Han case.
 
-## Next concrete move — wait for measured notes feedback
+## Next concrete move — decide the sparse-Han tradeoff from final measurements
 
-1. Do not change the desktop font or invent another subset. Receive the notes-side waterfall,
-   transferred bytes, LCP and CLS results first.
-2. If a font requirement returns, reproduce it against `build/web/`, make the smallest web-layer
-   change, then run `task web:test-gates` and `task web:all` before re-syncing notes.
-3. If no font requirement returns, this lane is complete. Cleanup and the KR-first rewrite remain
-   separate work; roadmap: <https://github.com/junghan0611/GLG-Mono/issues/2>.
+1. Finish the notes-side waterfall/LCP/CLS report; keep its integration checkpoint uncommitted.
+2. Re-evaluate the deliberate eight-file/no-frequency contract against the sparse-Han measurements.
+   Compare bounded alternatives before coding: accept the tail, add one standardized common-Han
+   tier, or reopen chunking. Do **not** revive the discarded 192-file corpus prototype by default.
+3. After GLG explicitly chooses a contract, make the smallest web-layer change, run
+   `task web:test-gates` and `task web:all`, then re-sync and remeasure notes.
+4. Cleanup and the KR-first rewrite remain separate work; roadmap:
+   <https://github.com/junghan0611/GLG-Mono/issues/2>.
 
 ## What the verifier actually checks
 
@@ -81,9 +87,9 @@ outline and shapes thousands of strings, so never run it per mutation — `--fac
 
 # RECENT
 
-- [2026-07-13] Notes integration — the generated eight-file distribution is synced through a
-  deterministic notes-owned script; font hashes, sizes, CSS references and manifest totals agree,
-  and GLG visually confirmed the local garden. Performance measurement remains notes-owned.
+- [2026-07-13] Notes integration — visual rendering is good and no-Han pages reach 1.07 MB, but
+  measured sparse-Han pages pull 2 MB `jp` faces (homepage 3.03 MB; one test note 5.56 MB). Notes
+  keeps the integration uncommitted while the delivery contract is reconsidered.
 - [2026-07-13] Type-6 hardening — chained-context records are projected by their invoked lookup
   semantics, reachable chains add derived HarfBuzz canaries, and `task web:test-gates` permanently
   plants fourteen defects. All four faces pass the full release verifier.
