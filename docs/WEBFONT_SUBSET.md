@@ -112,8 +112,24 @@ Every generated face/tier must pass:
    must not cross tiers. An unknown lookup type must **fail closed**, never be ignored.
    None of this is taken on trust: the verifier reads the rules back out of the shipped
    WOFF2 and compares them against the source's projection onto that tier, then shapes
-   every ligature and mark/base pair the font declares through HarfBuzz twice — once with
-   the source, once with the tier — and demands the same glyphs and positions.
+   every ligature, mark/base pair and chained context the font declares through HarfBuzz
+   twice — once with the source, once with the tier — and demands the same glyphs and
+   positions.
+
+   **A chained context is its record, not its coverage.** A type-6 rule carries
+   `SubstLookupRecord`s that say *which lookup runs at which position*; delete them and the
+   contexts still match, they simply substitute nothing. Coverage compares equal, so a rule
+   set keyed on coverage cannot see the loss — and this font makes that concrete: lookup 25
+   (`ccmp`, five subtables, each invoking lookup 26) has **coverage identical to lookup 29,
+   which carries no records at all**. The projection therefore spells each record out as
+   `(SequenceIndex, the rules of the lookup it names)`, resolved by glyph name because
+   subsetting renumbers lookup indices.
+
+   Shaping cannot stand in for this. HarfBuzz composes before it lays out: `d` + U+030C
+   becomes the precomposed `dcaron` glyph, so the `d/l/t/L` + caron chain never fires and no
+   canary can reach it. `g` + U+0326 and `j` + U+0300 have no precomposed form, fire, and are
+   caught. **A rule that no text can reach still must not be silently dropped** — that is the
+   layout gate's job, and the reason it models record semantics rather than trusting shaping.
 6. **Global tables** — preserve `BASE`. `pyftsubset` drops unknown tables by default, so
    `--passthrough-tables` is required and the result must be verified binary-identical.
 7. **Licensing** — `pyftsubset` keeps only nameIDs 0–6 by default, dropping 13/14. Pass
@@ -123,6 +139,21 @@ Every generated face/tier must pass:
 8. **Determinism** — two builds from a clean staging directory produce identical hashes for all
    eight WOFF2 files, the CSS and the manifest. Required because notes serves WOFF2 immutable for
    a year.
+
+### The gates are tested, not trusted
+
+`webfont_verify.py` has been wrong once already: an earlier version read the *source* and let a
+delivered face with `GSUB` deleted pass all eight gates. A gate that cannot fail is not a gate, so
+`test_webfont_gates.py` (`task web:test-gates`, ~24 s) plants fourteen defects in a copy of the
+distribution and demands a FAIL for each: GSUB/GPOS deleted, a ligature removed, **a chain's
+`SubstLookupRecord` removed and a chain rewired to another lookup**, `BASE` dropped, nameID 13
+stripped, notices emptied, a font byte flipped, `total_bytes` disagreeing, and four ways for the
+stylesheet to lie. Each mutation runs only the gates it attacks, on one face — re-verifying four
+faces per mutation was ten minutes of proving nothing.
+
+Any new gate arrives with the mutation that proves it bites. The full sweep (`task web:verify`,
+~7 min: 260k decomposed outlines across four faces, thousands of HarfBuzz strings, and a rebuild
+compared byte for byte) is a release checkpoint, not an inner loop.
 
 ### Verifying without depending on glyph names
 

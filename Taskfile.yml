@@ -417,6 +417,11 @@ tasks:
     cmds:
       - python3 webfont_verify.py
 
+  web:test-gates:
+    desc: 검증기 자체 검증 (결함 14종을 심고 게이트가 전부 무는지 확인)
+    cmds:
+      - python3 test_webfont_gates.py
+
   web:all:
     desc: 웹폰트 빌드 + 검증
     cmds:

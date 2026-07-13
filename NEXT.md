@@ -3,28 +3,26 @@
 Boot sector for the next session. Durable rules live in `AGENTS.md`; design detail lives in
 `docs/WEBFONT_SUBSET.md`.
 
-# NOW — the fonts are built and verified; nobody has looked at them
+# NOW — webfont delivery complete; measured feedback pending
 
-- **Stem**: the garden makes an ordinary Korean page download 5,280 KB of font. The two-tier web
-  build brings that to **1,070 KB** (80% off) with eight WOFF2 files, no corpus and no chunking.
-- **State**: `task web:all` builds and verifies. Every gate is green and every gate has been shown
-  to bite — see below. `build/web/` is gitignored; nothing has been vendored into `notes`.
-- **The gap**: **not one glyph has been rendered in a browser.** The gates prove the tiers are the
-  font; they do not prove a page looks right. That is the whole of what remains.
+- **Result**: the garden's ordinary Korean page font payload fell from 5,280 KB to **1,070 KB**
+  (80% off): eight WOFF2 files, no corpus and no chunking; Regular-core + Bold-core are the normal
+  two requests.
+- **Proof**: `task web:all` is green across all four faces; `task web:test-gates` plants fourteen
+  defects and catches all fourteen. The full verifier compares shipped layout rules, thousands of
+  HarfBuzz strings and all thirteen distribution files deterministically.
+- **Delivery**: `~/repos/gh/notes` now owns a deterministic `scripts/sync-webfonts.sh` that copies
+  the verified distribution and generates `/static/fonts/` URLs. GLG has visually confirmed the
+  local garden. The notes-side performance evaluation is still running and may return requirements.
 
-## Next concrete move — browser integration in `notes`
+## Next concrete move — wait for measured notes feedback
 
-1. Copy `build/web/*.woff2` into `~/repos/gh/notes/quartz/static/fonts/`, replacing the four full
-   faces (11 MB) with the eight tiers.
-2. Replace the four `@font-face` blocks in `quartz/styles/custom.scss` with the eight from
-   `build/web/glg-mono.css`. **The generated `src:` URLs are bare filenames**; Quartz serves from
-   the site root, so they need the `/static/fonts/` prefix. Decide whether the builder should emit
-   that prefix (an option) or the copy step should rewrite it, and write the choice down.
-3. Build the garden locally and look at it: Korean body text, a page with 漢字, italics, bold,
-   NFD combining accents, Jamo, and a code block with ligatures.
-4. Watch the network waterfall: a Korean home page must request **Regular-core and Bold-core, and
-   nothing else**. Record the transfer size, LCP and CLS.
-5. Only then ship.
+1. Do not change the desktop font or invent another subset. Receive the notes-side waterfall,
+   transferred bytes, LCP and CLS results first.
+2. If a font requirement returns, reproduce it against `build/web/`, make the smallest web-layer
+   change, then run `task web:test-gates` and `task web:all` before re-syncing notes.
+3. If no font requirement returns, this lane is complete. Cleanup and the KR-first rewrite remain
+   separate work; roadmap: <https://github.com/junghan0611/GLG-Mono/issues/2>.
 
 ## What the verifier actually checks
 
@@ -39,14 +37,16 @@ stated in terms of the delivered file.
 | hinting | glyph bytecode or `cvt`/`fpgm`/`prep`/`gasp` altered |
 | metrics | vertical metrics or `xAvgCharWidth` drifting (field-level; `numberOfHMetrics` must change) |
 | tables | `BASE` dropped — `pyftsubset` discards unknown tables by default |
-| layout | a substitution or mark-attachment rule missing from the shipped file |
-| shaping | HarfBuzz shaping the tier differently from the full font, across 3,216 derived canaries |
+| layout | a substitution, mark-attachment or **chained-context record** missing or rewired |
+| shaping | HarfBuzz shaping the tier differently from the full font, across 3,233 derived canaries |
 | stylesheet | a bad URL, a range that does not cover the file, tiers both claiming a character, `font-synthesis` |
-| manifest | a file whose bytes no longer match its content-hashed name |
+| manifest | a file whose bytes no longer match its content-hashed name, or a wrong `total_bytes` |
 | determinism | a rebuild that does not reproduce all 13 files byte for byte |
 
-Eleven planted defects are all caught (`--faces Regular --gates <gate>` keeps a probe at ~1 s;
-the full sweep walks every outline and shapes thousands of strings, so do not run it per mutation).
+`task web:test-gates` (`test_webfont_gates.py`, ~24 s) plants **fourteen** defects and demands a
+FAIL for each. Add a gate only with the mutation that proves it bites. The full sweep walks every
+outline and shapes thousands of strings, so never run it per mutation — `--faces Regular
+--gates <gate>` keeps a probe at ~1 s.
 
 ## Verified traps — carry forward
 
@@ -55,6 +55,14 @@ the full sweep walks every outline and shapes thousands of strings, so do not ru
 - **HarfBuzz cannot read WOFF2.** Decompress before shaping, or every glyph comes back `.notdef`.
 - The font has **chained-contextual GSUB (type 6)**, not just types 1/3/4. An unknown lookup type
   must fail the build, not be skipped.
+- **A type-6 rule is its `SubstLookupRecord`, not its coverage.** Delete the record and the context
+  still matches, substituting nothing; coverage compares equal and the loss is invisible. Lookup 25
+  (`ccmp`, invokes lookup 26) has coverage *identical* to lookup 29, which has no records at all —
+  so a coverage-keyed rule set cannot even tell them apart. The layout gate spells each record out
+  as `(SequenceIndex, rules of the lookup it names)`.
+- **HarfBuzz composes before it lays out**, so shaping cannot stand in for that. `d` + U+030C
+  becomes precomposed `dcaron` and the caron chain never fires; `g` + U+0326 and `j` + U+0300 have
+  no precomposed form, fire, and are caught. A rule no text can reach still must not be dropped.
 - Declaring the jp tier's exact cmap costs 4,664 `unicode-range` spans — 200 KB of render-blocking
   CSS. The blocks are declared whole instead; a missing ideograph costs a wasted request, never a
   wrong glyph.
@@ -68,13 +76,20 @@ the full sweep walks every outline and shapes thousands of strings, so do not ru
 - Do not "fix" the 27 IBM Plex Sans JP combining marks that are full-width. They have been wrong
   since v1.0.0, they have no GPOS mark lookup, and setting their advance to 0 without anchors would
   trade one rendering defect for another. Separate decision, separate canaries.
-- Do not vendor into `notes` until the browser waterfall, LCP, CLS and shaping canaries pass.
+- Do not interpret notes-side PageSpeed work as permission to reopen the desktop font pipeline;
+  measured font regressions return through the web-layer gates above.
 
 # RECENT
 
+- [2026-07-13] Notes integration — the generated eight-file distribution is synced through a
+  deterministic notes-owned script; font hashes, sizes, CSS references and manifest totals agree,
+  and GLG visually confirmed the local garden. Performance measurement remains notes-owned.
+- [2026-07-13] Type-6 hardening — chained-context records are projected by their invoked lookup
+  semantics, reachable chains add derived HarfBuzz canaries, and `task web:test-gates` permanently
+  plants fourteen defects. All four faces pass the full release verifier.
 - [2026-07-13] `fa770da` — verifier rewritten to check the shipped files: layout rules read back
   from the WOFF2, HarfBuzz canaries derived from the font's own rules, stylesheet/manifest/notices
-  gates, byte-for-byte determinism. Eleven mutations all caught.
+  gates and byte-for-byte determinism.
 - [2026-07-13] `d289e4e` — eight-file two-tier web build. 5,280 KB → 1,070 KB.
 - [2026-07-13] `ef67095`, `3dbf108`, `af273a3` — FontForge 20251009 over-compresses `hmtx` and
   destroys zero-width glyphs at every TTF round-trip. Four round-trips, all guarded by

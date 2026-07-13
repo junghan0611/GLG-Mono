@@ -21,6 +21,7 @@ Usage:  python3 webfont_verify.py [--web build/web]
 import argparse
 import hashlib
 import io
+import itertools
 import json
 import os
 import re
@@ -83,6 +84,84 @@ def sha256(path):
 # --------------------------------------------------------------------------- layout
 
 
+CONTEXT_COVERAGES = ("BacktrackCoverage", "InputCoverage", "LookAheadCoverage")
+MAX_CHAIN_DEPTH = 4
+
+
+def chain_context(sub, keep):
+    """The three coverage groups of a chained rule, or None if it cannot fire here.
+
+    A coverage emptied by the tier boundary means the rule can never match in this file,
+    so it is not something the tier lost.
+    """
+    groups = tuple(
+        tuple(tuple(sorted(g for g in coverage.glyphs if keep(g)))
+              for coverage in getattr(sub, attr, []) or [])
+        for attr in CONTEXT_COVERAGES
+    )
+    if any(not coverage for group in groups for coverage in group):
+        return None
+    return groups
+
+
+def lookup_rules(tag, lookups, lookup, keep, depth=0):
+    """Every rule one lookup declares, spelled out in glyph names."""
+    rules = set()
+    for sub in lookup.SubTable:
+        kind = (tag, lookup.LookupType)
+        if kind == ("GSUB", 1):
+            for src, dst in sub.mapping.items():
+                if keep(src) and keep(dst):
+                    rules.add(("gsub1", src, dst))
+        elif kind == ("GSUB", 2):
+            for src, dst in sub.mapping.items():
+                if keep(src) and all(map(keep, dst)):
+                    rules.add(("gsub2", src, tuple(dst)))
+        elif kind == ("GSUB", 3):
+            for src, alts in sub.alternates.items():
+                surviving = tuple(a for a in alts if keep(a))
+                if keep(src) and surviving:
+                    rules.add(("gsub3", src, surviving))
+        elif kind == ("GSUB", 4):
+            for first, entries in sub.ligatures.items():
+                for entry in entries:
+                    glyphs = [first] + list(entry.Component) + [entry.LigGlyph]
+                    if all(map(keep, glyphs)):
+                        rules.add(("gsub4", first, tuple(entry.Component), entry.LigGlyph))
+        elif kind == ("GSUB", 6):
+            if getattr(sub, "Format", None) != 3:
+                fail("layout", f"GSUB 6 subtable is format {getattr(sub, 'Format', '?')}, "
+                               f"which this projection does not model — fail closed")
+                continue
+            context = chain_context(sub, keep)
+            if context is None:
+                continue
+            if depth >= MAX_CHAIN_DEPTH:
+                fail("layout", f"GSUB chains nest deeper than {MAX_CHAIN_DEPTH} lookups")
+                continue
+            # The record is the whole point of a chained lookup: it says which lookup runs
+            # at which position. Its LookupListIndex is renumbered by subsetting, so what
+            # is compared is the *rules of the lookup it names*, projected the same way.
+            # Record order is semantic and is preserved.
+            records = tuple(
+                (record.SequenceIndex,
+                 frozenset(lookup_rules(tag, lookups, lookups[record.LookupListIndex],
+                                        keep, depth + 1)))
+                for record in (getattr(sub, "SubstLookupRecord", None) or [])
+            )
+            rules.add(("gsub6", context, records))
+        elif kind == ("GPOS", 4):
+            marks = [g for g in sub.MarkCoverage.glyphs if keep(g)]
+            bases = [g for g in sub.BaseCoverage.glyphs if keep(g)]
+            if marks and bases:
+                rules.add(("gpos4", tuple(sorted(marks)), tuple(sorted(bases))))
+        elif kind in (("GPOS", 1), ("GPOS", 2)):
+            continue
+        else:
+            fail("layout", f"unknown lookup {tag} type {lookup.LookupType}")
+    return rules
+
+
 def layout_rules(font, retained=None):
     """Every substitution and mark-attachment the font declares, as comparable rules.
 
@@ -95,45 +174,9 @@ def layout_rules(font, retained=None):
     for tag in ("GSUB", "GPOS"):
         if tag not in font or font[tag].table.LookupList is None:
             continue
-        for lookup in font[tag].table.LookupList.Lookup:
-            for sub in lookup.SubTable:
-                kind = (tag, lookup.LookupType)
-                if kind == ("GSUB", 1):
-                    for src, dst in sub.mapping.items():
-                        if keep(src) and keep(dst):
-                            rules.add(("gsub1", src, dst))
-                elif kind == ("GSUB", 2):
-                    for src, dst in sub.mapping.items():
-                        if keep(src) and all(map(keep, dst)):
-                            rules.add(("gsub2", src, tuple(dst)))
-                elif kind == ("GSUB", 3):
-                    for src, alts in sub.alternates.items():
-                        surviving = tuple(a for a in alts if keep(a))
-                        if keep(src) and surviving:
-                            rules.add(("gsub3", src, surviving))
-                elif kind == ("GSUB", 4):
-                    for first, entries in sub.ligatures.items():
-                        for entry in entries:
-                            glyphs = [first] + list(entry.Component) + [entry.LigGlyph]
-                            if all(map(keep, glyphs)):
-                                rules.add(("gsub4", first, tuple(entry.Component),
-                                           entry.LigGlyph))
-                elif kind == ("GSUB", 6):
-                    context = []
-                    for attr in ("BacktrackCoverage", "InputCoverage", "LookAheadCoverage"):
-                        for coverage in getattr(sub, attr, []) or []:
-                            context.append(tuple(sorted(g for g in coverage.glyphs if keep(g))))
-                    if all(context):
-                        rules.add(("gsub6", tuple(context)))
-                elif kind == ("GPOS", 4):
-                    marks = [g for g in sub.MarkCoverage.glyphs if keep(g)]
-                    bases = [g for g in sub.BaseCoverage.glyphs if keep(g)]
-                    if marks and bases:
-                        rules.add(("gpos4", tuple(sorted(marks)), tuple(sorted(bases))))
-                elif kind in (("GPOS", 1), ("GPOS", 2)):
-                    continue
-                else:
-                    fail("layout", f"unknown lookup {tag} type {lookup.LookupType}")
+        lookups = font[tag].table.LookupList.Lookup
+        for lookup in lookups:
+            rules |= lookup_rules(tag, lookups, lookup, keep)
     return rules
 
 
@@ -192,13 +235,45 @@ class Shaper:
         ]
 
 
+CHAIN_CONTEXT_SAMPLES = 4    # per backtrack/lookahead position
+CHAIN_INPUT_SAMPLES = 8      # per input position — the input is what gets substituted
+
+
+def chain_canaries(sub, features, reverse, tier_codepoints):
+    """Strings that make a chained rule actually fire.
+
+    A coverage-only comparison cannot see a deleted SubstLookupRecord: the contexts still
+    match, they simply substitute nothing. The only way to notice is to type text the
+    chain is supposed to rewrite and watch what comes out, so each context position
+    contributes its glyphs and the product becomes the canaries. Backtrack coverages are
+    stored nearest-first, so they are reversed back into reading order.
+    """
+    positions = []
+    for attr, limit in (("BacktrackCoverage", CHAIN_CONTEXT_SAMPLES),
+                        ("InputCoverage", CHAIN_INPUT_SAMPLES),
+                        ("LookAheadCoverage", CHAIN_CONTEXT_SAMPLES)):
+        group = []
+        for coverage in getattr(sub, attr, None) or []:
+            usable = sorted(reverse[g] for g in coverage.glyphs
+                            if g in reverse and reverse[g] in tier_codepoints)
+            if not usable:
+                return []            # this context cannot be typed from this tier
+            group.append(usable[:limit])
+        if attr == "BacktrackCoverage":
+            group.reverse()
+        positions += group
+
+    return [("".join(map(chr, combination)), features)
+            for combination in itertools.product(*positions)]
+
+
 def derived_canaries(source, tier_codepoints):
     """Turn the font's own rules into test strings.
 
-    Every ligature it declares and every mark/base pair it can position becomes a string,
-    so the canaries cover what this font actually does rather than what a font usually
-    does. Only rules whose codepoints all land in the tier are tested — the rest cannot be
-    triggered from that file by construction.
+    Every ligature it declares, every mark/base pair it can position and every chained
+    context it can rewrite becomes a string, so the canaries cover what this font actually
+    does rather than what a font usually does. Only rules whose codepoints all land in the
+    tier are tested — the rest cannot be triggered from that file by construction.
     """
     reverse = {}
     for codepoint, name in source.getBestCmap().items():
@@ -211,18 +286,22 @@ def derived_canaries(source, tier_codepoints):
 
     cases = []
     for index, lookup in enumerate(source["GSUB"].table.LookupList.Lookup):
-        if lookup.LookupType != 4:
-            continue
         features = {tag: True for tag in feature_of.get(index, ())}
-        for sub in lookup.SubTable:
-            for first, entries in sub.ligatures.items():
-                for entry in entries:
-                    glyphs = [first] + list(entry.Component)
-                    if not all(g in reverse for g in glyphs):
-                        continue
-                    codepoints = [reverse[g] for g in glyphs]
-                    if all(c in tier_codepoints for c in codepoints):
-                        cases.append(("".join(map(chr, codepoints)), features))
+        if lookup.LookupType == 4:
+            for sub in lookup.SubTable:
+                for first, entries in sub.ligatures.items():
+                    for entry in entries:
+                        glyphs = [first] + list(entry.Component)
+                        if not all(g in reverse for g in glyphs):
+                            continue
+                        codepoints = [reverse[g] for g in glyphs]
+                        if all(c in tier_codepoints for c in codepoints):
+                            cases.append(("".join(map(chr, codepoints)), features))
+        elif lookup.LookupType == 6:
+            for sub in lookup.SubTable:
+                if not (getattr(sub, "SubstLookupRecord", None) or []):
+                    continue     # a chain that substitutes nothing has nothing to break
+                cases += chain_canaries(sub, features, reverse, tier_codepoints)
 
     for lookup in source["GPOS"].table.LookupList.Lookup:
         if lookup.LookupType != 4:
@@ -477,23 +556,29 @@ def distribution(web_dir):
 def gate_manifest(web_dir, manifest):
     """The manifest must describe the files that are actually there."""
     wrong = []
+    shipped = 0
     for face, entry in manifest["faces"].items():
         for tier, info in entry["tiers"].items():
             path = os.path.join(web_dir, info["file"])
             if not os.path.exists(path):
                 wrong.append(f"{info['file']} absent")
                 continue
+            shipped += os.path.getsize(path)
             if os.path.getsize(path) != info["bytes"]:
                 wrong.append(f"{info['file']} size {os.path.getsize(path)} != {info['bytes']}")
             digest = sha256(path)[:8]
             if digest != info["sha256_8"] or not info["file"].endswith(f".{digest}.woff2"):
                 wrong.append(f"{info['file']} content hash is {digest}")
+    if manifest.get("total_bytes") != shipped:
+        wrong.append(f"total_bytes says {manifest.get('total_bytes')}, the eight files "
+                     f"weigh {shipped}")
     if sorted(manifest["excluded_pua"]) != sorted(f"U+{c:04X}" for c in EXCLUDED_PUA):
         wrong.append("excluded_pua does not match the declared exclusion")
     if wrong:
         fail("manifest", "; ".join(wrong[:4]))
     else:
-        ok("manifest", f"every file matches its recorded size and content hash")
+        ok("manifest", f"every file matches its recorded size, content hash and the "
+                       f"{shipped/1024/1024:.2f} MB total")
 
 
 def gate_determinism(web_dir):
