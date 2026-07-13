@@ -91,20 +91,52 @@ the manifest. Do not silently remove any other encoded character.
 
 Every generated face/tier must pass:
 
-1. **Coverage** — per-face cmap union and disjointness as defined above.
-2. **Geometry** — every retained encoded codepoint keeps decomposed outline, advance and LSB.
-3. **Hinting** — glyph programs and global `cvt `/`fpgm`/`prep`/`gasp` data remain equivalent.
-4. **Metrics** — UPM, hhea, OS/2 vertical metrics, `xAvgCharWidth` and `isFixedPitch` remain equal.
-5. **Shaping** — GPOS mark/base and GSUB multi-input clusters do not cross tiers; fixed canaries
-   compare source and web shaping.
-6. **Global tables** — preserve `BASE`. `pyftsubset --drop-tables=` alone is insufficient because
-   unknown tables are still dropped; use and verify the appropriate passthrough behavior.
-7. **Licensing** — preserve nameID 0/13/14 content and ship `OFL.txt` plus
-   `THIRD_PARTY_NOTICES.txt` for IBM Plex, PlemolJP/PlemolKR, Hack and Bitstream Vera provenance.
-8. **Determinism** — two builds from the same source produce identical hashes.
+1. **Coverage** — per-face cmap union and disjointness as defined above. Catches a bad seed, a
+   missing PUA exclusion, or the small per-face cmap differences.
+2. **Geometry** — every retained glyph keeps its decomposed outline (`DecomposingRecordingPen`),
+   advance and LSB. Check **glyphs, not just encoded codepoints**: layout closure drags in
+   unencoded dependencies, and composite glyphs are re-pointed at new GIDs.
+3. **Hinting** — retained glyph bytecode matches the source, and `cvt `/`fpgm`/`prep`/`gasp` are
+   binary-identical. Do not demand binary equality of composite glyph records; their component
+   GIDs are renumbered by design.
+4. **Metrics** — compare **fields, not tables**. Equal: UPM, `hhea` ascent/descent/lineGap, OS/2
+   vertical metrics, `xAvgCharWidth`, `post.isFixedPitch` and `post.italicAngle`. Necessarily
+   different: `hhea.numberOfHMetrics`, `maxp.numGlyphs`, `head.checkSumAdjustment`. A whole-table
+   equality check here is simply wrong and will fail on a correct subset.
+5. **Shaping** — the highest-risk gate. Close the dependency graph *before* partitioning, then
+   verify lookup coverage after subsetting, then run shaping canaries. GPOS in the current source
+   is four type-4 mark-to-base lookups whose marks and bases are all Latin/Cyrillic, so they land
+   in `core` and never straddle the boundary — but the builder must derive that, not assume it:
+   bind each `MarkBasePos` subtable's encoded `MarkCoverage ∪ BaseCoverage` into one component.
+   GSUB is type 1/3/4 only; a type-4 ligature's input sequence must not cross tiers. If a
+   contextual type 5/6 or an extension lookup ever appears, **fail closed** rather than ignore it.
+6. **Global tables** — preserve `BASE`. `pyftsubset` drops unknown tables by default, so
+   `--passthrough-tables` is required and the result must be verified binary-identical.
+7. **Licensing** — `pyftsubset` keeps only nameIDs 0–6 by default, dropping 13/14. Pass
+   `--name-IDs='*' --name-legacy --name-languages='*'` and verify nameID 0/13/14 content against
+   the source. Ship `OFL.txt` and `THIRD_PARTY_NOTICES.txt` (IBM Plex, PlemolJP/PlemolKR, Hack,
+   Bitstream Vera).
+8. **Determinism** — two builds from a clean staging directory produce identical hashes for all
+   eight WOFF2 files, the CSS and the manifest. Required because notes serves WOFF2 immutable for
+   a year.
 
-Dropping non-rendering `post` glyph names may be evaluated as a size optimization, but only after
-all rendering and licence gates remain green.
+### Verifying without depending on glyph names
+
+Dropping `post` glyph names (version 3.0) is a legitimate size optimisation, but correctness must
+not hang on names being present. Build in two steps:
+
+1. Subset **with** `--glyph-names`, and verify everything above against the source by glyph name.
+2. Rewrite only `post` to 3.0 for the shipped WOFF2, then diff every sfnt table except `post`
+   against the verified intermediate, and separately confirm `post`'s header fields.
+
+Measured on the full Regular face, post 3.0 saves 79,768 bytes (2,672,456 → 2,592,688, about 3%).
+That is not enough to justify weakening verification, so names stay until the pipeline is green.
+Prefer emitting a source-name → output-GID map into the manifest over `--retain-gids`.
+
+Note that `test_advance_widths.py` guards the *desktop* build and must not be pointed at a `jp`
+tier: that tier has neither the Console discriminator characters nor most of the Latin contract
+glyphs. The web verifier compares each tier against its source face instead, which subsumes the
+zero-advance check.
 
 ## Build shape
 

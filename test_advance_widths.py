@@ -92,6 +92,13 @@ def is_console(font):
     return hmtx[cmap[SECTION_SIGN]][0] <= hmtx[cmap[DIGIT_ZERO]][0] * 1.5
 
 
+SELECT_CALL = re.compile(
+    r'select\(\(\s*"(?P<mode>more|less)"\s*,\s*"unicode"'
+    r'(?P<ranged>\s*,\s*"ranges")?\s*\)\s*,\s*'
+    r'(?P<first>0x[0-9A-Fa-f]+)(?:\s*,\s*(?P<last>0x[0-9A-Fa-f]+))?\s*\)'
+)
+
+
 def dropped_in_non_console():
     """Codepoints `delete_not_console_glyphs()` strips from the Latin face.
 
@@ -99,6 +106,11 @@ def dropped_in_non_console():
     non-Console builds those glyphs are handed to IBM Plex Sans JP, which draws several
     of them — U+00AD, say — as spacing glyphs, so Plex Mono's zero advance is no longer
     the contract for them.
+
+    FontForge's selection is a running set, so the calls have to be replayed in order:
+    `more` adds, `less` takes back. The build keeps six characters that way (U+00B7,
+    U+2022, U+2024, U+2219, U+25D8, U+25E6 — the editors' whitespace-visualisation
+    glyphs), and reading only the `more` calls would wrongly claim they are dropped.
     """
     source = open(BUILD_SCRIPT, encoding="utf-8").read()
     body = re.search(r"def delete_not_console_glyphs\(.*?\n(?=def |\Z)", source, re.S)
@@ -106,10 +118,14 @@ def dropped_in_non_console():
         raise SystemExit(f"delete_not_console_glyphs() not found in {BUILD_SCRIPT}")
 
     dropped = set()
-    for lo, hi in re.findall(r'"ranges"\),\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+)', body.group()):
-        dropped.update(range(int(lo, 16), int(hi, 16) + 1))
-    for cp in re.findall(r'"unicode"\),\s*(0x[0-9A-Fa-f]+)', body.group()):
-        dropped.add(int(cp, 16))
+    for call in SELECT_CALL.finditer(body.group()):
+        first = int(call["first"], 16)
+        last = int(call["last"], 16) if call["ranged"] and call["last"] else first
+        codepoints = range(first, last + 1)
+        if call["mode"] == "more":
+            dropped.update(codepoints)
+        else:
+            dropped.difference_update(codepoints)
     return dropped
 
 
