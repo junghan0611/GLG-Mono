@@ -1,9 +1,0 @@
-time=2026-01-26T09:59:46.763+09:00 level=INFO msg="Daemon started (interval: %v, auto-commit: %v, auto-push: %v)" !BADKEY=5s !BADKEY=false !BADKEY=false
-time=2026-01-26T09:59:46.763+09:00 level=INFO msg="using database" path=/home/junghan/repos/gh/GLG-Mono/.beads/beads.db
-time=2026-01-26T09:59:46.880+09:00 level=ERROR msg="cannot open database" error="schema probe failed after migration retry: database schema is incompatible: missing columns in child_counters: last_child. Database may be corrupted or from incompatible version. Run 'bd doctor' to diagnose"
-time=2026-01-26T10:00:45.989+09:00 level=INFO msg="Daemon started (interval: %v, auto-commit: %v, auto-push: %v)" !BADKEY=5s !BADKEY=false !BADKEY=false
-time=2026-01-26T10:00:45.989+09:00 level=INFO msg="using database" path=/home/junghan/repos/gh/GLG-Mono/.beads/beads.db
-time=2026-01-26T10:00:46.068+09:00 level=ERROR msg="cannot open database" error="schema probe failed after migration retry: database schema is incompatible: missing columns in child_counters: last_child. Database may be corrupted or from incompatible version. Run 'bd doctor' to diagnose"
-time=2026-01-26T10:01:38.671+09:00 level=INFO msg="Daemon started (interval: %v, auto-commit: %v, auto-push: %v)" !BADKEY=5s !BADKEY=false !BADKEY=false
-time=2026-01-26T10:01:38.671+09:00 level=INFO msg="using database" path=/home/junghan/repos/gh/GLG-Mono/.beads/beads.db
-time=2026-01-26T10:01:38.741+09:00 level=ERROR msg="cannot open database" error="post-migration validation failed: migration invariants failed:\n  - required_config_present: required config key missing: issue_prefix (database has 1 issues)"
