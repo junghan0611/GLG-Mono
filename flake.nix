@@ -40,9 +40,9 @@
             echo "=================================="
             python3 "${./work_scripts/env_report.py}" || true
             echo ""
-            echo "  task           # list build tasks"
-            echo "  task quick     # Regular-weight desktop build"
-            echo "  task web:all   # build + verify web fonts"
+            echo "  task                # list build tasks"
+            echo "  task quick          # Regular-weight desktop build"
+            echo "  task verify:widths  # advance-width regression gate"
             echo ""
           '';
         };

@@ -12,7 +12,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 import fontforge
 import psMat
-from fontTools.ttLib import TTFont
+from font_widths import restore_advance_widths, snapshot_widths
 
 # iniファイルを読み込む
 settings = configparser.ConfigParser()
@@ -208,32 +208,6 @@ def get_options():
             return
 
 
-def restore_advance_widths(font_path, widths):
-    """FontForge が hmtx を潰した分を、生成前の advance に戻す。
-
-    hmtx は先頭 numberOfHMetrics 個だけ advance を持ち、以降のグリフは最後の値を
-    継承する。FontForge 20251009 は等幅フォントとみなして numberOfHMetrics=4 まで
-    圧縮するが、それ以降にある 0 幅グリフ (結合分音記号・ソフトハイフン・ZWSP) まで
-    半角幅を継承してしまい、NFD のアクセントが 1 セット分ずれる。
-    fontTools は保存時に numberOfHMetrics を実際の advance から計算し直すので、
-    生成直後に FontForge 側の幅を書き戻せば足りる。
-    """
-    font = TTFont(font_path)
-    hmtx = font["hmtx"]
-    restored = 0
-    for glyph_name, width in widths.items():
-        if glyph_name not in hmtx.metrics:
-            continue
-        advance, lsb = hmtx.metrics[glyph_name]
-        if advance != width:
-            hmtx.metrics[glyph_name] = (int(width), lsb)
-            restored += 1
-    if restored:
-        font.save(font_path)
-        print(f"restore advance width: {restored} glyphs in {font_path}", file=sys.stderr)
-    font.close()
-
-
 def generate_font(jp_style, eng_style, merged_style):
     print(f"=== Generate {merged_style} ===")
 
@@ -338,8 +312,8 @@ def generate_font(jp_style, eng_style, merged_style):
     eng_path = f"{BUILD_FONTS_DIR}/{FONTFORGE_PREFIX}{font_name}-{merged_style}-eng.ttf"
     jp_path = f"{BUILD_FONTS_DIR}/{FONTFORGE_PREFIX}{font_name}-{merged_style}-jp.ttf"
 
-    eng_widths = {glyph.glyphname: glyph.width for glyph in eng_font.glyphs()}
-    jp_widths = {glyph.glyphname: glyph.width for glyph in jp_font.glyphs()}
+    eng_widths = snapshot_widths(eng_font)
+    jp_widths = snapshot_widths(jp_font)
 
     eng_font.generate(eng_path)
     jp_font.generate(jp_path)
@@ -651,7 +625,7 @@ def materialize_altuni_glyphs(font, entity_glyph_unicode_list):
 
     # alt_uni 処理後、エンコーディングがずれるためか一部のグリフの select() がうまくいかなくなるので開き直す
     font_path = f"{BUILD_FONTS_DIR}/{font.fullname}_{uuid.uuid4()}.ttf"
-    widths = {glyph.glyphname: glyph.width for glyph in font.glyphs()}
+    widths = snapshot_widths(font)
     font.generate(font_path)
     font.close()
     # ttf を経由するので hmtx が潰れうる。開き直す前に戻す。
@@ -995,7 +969,7 @@ def merge_hack(jp_font, eng_font, style):
             glyph.width = half_width
     # Hack フォントをオブジェクトとして扱いたくないので、一旦ファイル保存して直接マージする
     font_path = f"{BUILD_FONTS_DIR}/tmp_hack_{uuid.uuid4()}.ttf"
-    hack_widths = {glyph.glyphname: glyph.width for glyph in hack_font.glyphs()}
+    hack_widths = snapshot_widths(hack_font)
     hack_font.generate(font_path)
     hack_font.close()
 

@@ -22,6 +22,8 @@ import os
 from glob import glob
 import argparse
 
+from font_widths import restore_advance_widths, snapshot_widths
+
 
 def fix_korean_bearing(font_path, verbose=False):
     """
@@ -88,8 +90,12 @@ def fix_korean_bearing(font_path, verbose=False):
                         print(f"      U+{glyph.unicode:04X}: LSB {current_lsb:.1f}→{new_lsb:.1f}, RSB {current_rsb:.1f}→{new_rsb:.1f}")
 
         # 폰트 저장
+        # generate() 는 TTF 왕복이므로 FontForge 가 hmtx 를 과압축한다.
+        # 0 폭 글리프(결합 부호 등)가 반각 폭을 물려받지 않도록 저장 직후 되돌린다.
+        widths = snapshot_widths(font)
         font.generate(font_path)
         font.close()
+        restore_advance_widths(font_path, widths, quiet=not verbose)
 
         return (fixed_count, skipped_count, None)
 

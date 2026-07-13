@@ -81,13 +81,31 @@ Two failures surfaced when moving off the 25.05 pin. Both are fixed; do not rein
 - **`ttfautohint-py` >= 0.6 shells out to the CLI**, which rejects `--epoch` (a
   libttfautohint-only option). `options.parse_args()` returns a **dict**, so the old
   `hasattr`/`delattr` guard was a silent no-op. `fonttools_script.py` now pops the key.
-- **FontForge 20251009 over-compresses `hmtx`.** It reads the merged Latin face as
-  monospaced and writes `numberOfHMetrics=4`; every glyph past index 4 then inherits a
-  half-width advance, which destroys 54 zero-width glyphs (combining accents, soft
-  hyphen, ZWSP) and any non-monospace advance among GSUB-only glyphs. Outlines and cmap
-  stay identical, so only an advance-width check catches it.
-  `restore_advance_widths()` in `fontforge_script.py` writes FontForge's in-memory
-  widths back after each `generate()`. `task verify:widths` is the guard.
+- **FontForge 20251009 over-compresses `hmtx`.** It reads a monospaced face as
+  compressible and writes `numberOfHMetrics=4`; every glyph past index 4 then inherits a
+  half-width advance, destroying zero-width glyphs (combining accents, soft hyphen,
+  ZWSP, line separators, unencoded mark components). Outlines, glyph names and cmap all
+  survive intact, so only an advance-width check catches it, and roughly half the
+  casualties are unreachable from cmap. There is no `generate()` flag to disable it.
+
+  **Every FontForge → TTF round-trip must snapshot widths and write them back** via
+  `font_widths.py`. There are four:
+
+  | Where | Why it round-trips |
+  |---|---|
+  | `fontforge_script.py` final `generate()` | writes the eng and jp faces |
+  | `fontforge_script.py` `merge_hack()` | Hack goes out to a temp TTF, then `mergeFonts()` |
+  | `fontforge_script.py` alt_uni handler | generate + reopen to fix up `select()` |
+  | `fix_nf_korean_bearing.py` | rewrites the Nerd Fonts face after patching |
+
+  `merge_hack()` is the subtle one. Hack-Regular has no U+0305 or U+030D-U+0361 while
+  Hack-Bold ships them at advance 0, so only Bold and BoldItalic pulled those marks
+  through the Hack path — the corruption hit two faces out of sixteen and left Regular
+  looking clean.
+
+  `task verify:widths` (`test_advance_widths.py`) is the guard. It states the contract
+  over glyph *names*, not codepoints, and applies no Unicode-category filter, because
+  both would walk past the unencoded casualties.
 
 ## Font Families
 
@@ -221,8 +239,9 @@ build.ini            - Build configuration
 fontforge_script.py  - Stage 1: Font merging
 fonttools_script.py  - Stage 2: Post-processing
 fix_nf_korean_bearing.py - Stage 3: NF post-processing
+font_widths.py       - Advance-width repair for every FontForge TTF round-trip
 test_korean_bearing_nf.py - Korean bearing verification
-test_advance_widths.py - Zero-advance guard for combining marks (hmtx regression)
+test_advance_widths.py - Zero-advance guard (hmtx regression)
 verify_korean_complete.py - Complete Korean glyph validator
 Taskfile.yml         - Build automation
 flake.nix            - NixOS development environment (nixos-26.05 pin)
