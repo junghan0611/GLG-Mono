@@ -313,11 +313,17 @@ Nerd Fonts (Ryan L McIntyre), PlemolJP (Yuko Otawara). Any derived artifact must
 ### Web Fonts
 
 The full font is 2.6 MB per face as WOFF2 (lossless Brotli of a 27,846-codepoint font). Shipping it
-whole to a website is not viable. Web deliverables must be subset into `unicode-range` chunks.
-Design, measurements, and acceptance gates: **`docs/WEBFONT_SUBSET.md`**.
+whole to a website is not viable. The approved web-delivery contract is deliberately small:
+**4 faces × `{core,jp}` = exactly 8 WOFF2 files**. A normal Korean home page should request only
+Regular-core and Bold-core. Design and acceptance gates: **`docs/WEBFONT_SUBSET.md`**.
 
-Subsetting preserves the v1.0.0 Korean bearing fix and all vertical metrics — verified. It selects
-glyphs; it does not transform them.
+Do not reintroduce corpus-trained Hangul/Han frequency slicing or dozens of outputs. A discarded
+192-file prototype proved that approach can minimize transfer but violates this repository's
+cleanup and maintainability goal.
+
+Subsetting must preserve the v1.0.0 Korean bearing fix, physical Italic/BoldItalic outlines,
+vertical metrics, hinting, `BASE`, legal name records and cross-codepoint shaping. GPOS mark inputs
+include both marks and covered bases; GSUB multi-input ligatures cannot cross physical tiers.
 
 ### Glyph Handling
 
