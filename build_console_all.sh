@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build all Console variants (PlemolKRConsole + PlemolKR35Console)
-# This script runs the complete build process in nix-shell
+# This script runs the complete build process in the flake dev shell
 #
 # Usage:
 #   ./build_console_all.sh [--zip]
@@ -57,13 +57,13 @@ BUILD_LOG="build/build.log"
 
 echo "Building PlemolKRConsole (1:2 ratio)..."
 echo "  (Logs: $BUILD_LOG)"
-time nix-shell --run "python3 fontforge_script.py --console" 2>"$BUILD_LOG"
+time nix develop --command python3 fontforge_script.py --console 2>"$BUILD_LOG"
 echo "✅ PlemolKRConsole fontforge complete"
 echo ""
 
 echo "Building PlemolKR35Console (3:5 ratio)..."
 echo "  (Logs: $BUILD_LOG)"
-time nix-shell --run "python3 fontforge_script.py --console --35 --do-not-delete-build-dir" 2>>"$BUILD_LOG"
+time nix develop --command python3 fontforge_script.py --console --35 --do-not-delete-build-dir 2>>"$BUILD_LOG"
 echo "✅ PlemolKR35Console fontforge complete"
 echo ""
 
@@ -73,7 +73,7 @@ echo "---------------------------------------------------"
 
 echo "Processing all Console variants..."
 echo "  (Logs: $BUILD_LOG)"
-time nix-shell --run "python3 fonttools_script.py" 2>>"$BUILD_LOG"
+time nix develop --command python3 fonttools_script.py 2>>"$BUILD_LOG"
 echo "✅ FontTools complete"
 echo ""
 

@@ -110,7 +110,7 @@ all rendering and licence gates remain green.
 
 The release build:
 
-- runs inside `nix-shell`;
+- runs inside `nix develop` (`flake.nix`, nixos-26.05);
 - uses the nixpkgs default `python3` package set plus fontTools and Brotli;
 - reads only the four source TTFs and static two-tier rules;
 - never reads the garden or an external corpus;
@@ -127,9 +127,22 @@ task web:all       # build + verify, no corpus dependency
 
 ## Performance gate
 
-No transfer-size promise is made before the two-tier artifacts exist. Earlier 65 KiB Hangul and
-175 KB homepage projections belonged to a discarded many-chunk prototype and are invalid for this
-design.
+Earlier 65 KiB Hangul and 175 KB homepage figures belonged to the discarded many-chunk prototype
+and are invalid here. The numbers below are **measured**, by subsetting the built Regular/Bold TTFs
+to the two tiers and encoding real WOFF2:
+
+```text
+Regular   core   520.6 KB   jp  1868.0 KB     full face today: 2582 KB
+Bold      core   452.6 KB   jp  1928.1 KB     full face today: 2573 KB
+```
+
+Korean home page = Regular-core + Bold-core ≈ **973 KB**, against **5,280 KB** today. That is the
+honest ceiling of a corpus-free design: Hangul cannot be split further without frequency data,
+because Korean text scatters across the syllable block and would fetch every codepoint-ordered
+slice anyway. A page containing even one Han character still pulls the 1.87 MB `jp` tier.
+
+These are pipeline measurements, not a shipped result. Treat them as the size budget the real build
+must reproduce, and re-measure the Italic faces when they are cut.
 
 After building:
 

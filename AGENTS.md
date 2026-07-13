@@ -51,29 +51,43 @@ Upstream has had no updates since 2025-06; we do not track it.
 
 ### NixOS Setup (Required)
 
-**All build commands must run inside nix-shell:**
+**All build commands must run inside the flake dev shell:**
 
 ```bash
 # Enter development environment
-nix-shell
+nix develop
 
-# Or run single command
-nix-shell --run "task quick"
+# Or run a single command
+nix develop --command task quick
 ```
 
-The `shell.nix` file provides:
-- Python 3 with FontForge bindings
-- fontTools and ttfautohint packages
-- All required dependencies for font building
+`flake.nix` pins **nixos-26.05**, the same channel and revision as the host system
+(`flake.lock` reuses the system's nixpkgs rev, so entering the shell needs no download).
+nixpkgs is the only input; there is no `shell.nix`, and nothing pins a specific Python
+minor version — the generic `python3` / `python3Packages` set keeps interpreter and
+modules coherent.
 
-### Prerequisites
+Provided: `fontforge` (with Python bindings), `python3`, `fontTools`, `brotli`,
+`ttfautohint` (CLI + Python), `go-task`, `fontconfig`. `work_scripts/env_report.py`
+prints the resolved versions on shell entry.
 
-When using nix-shell, all dependencies are automatically provided:
-- Python 3.x
-- FontForge (with Python bindings)
-- fontTools
-- ttfautohint
-- Task (taskfile.dev)
+`brotli` is not optional: without it `fontTools` raises `ImportError` the moment a
+WOFF2 is saved, and the web font build cannot run at all.
+
+### Toolchain traps on 26.05
+
+Two failures surfaced when moving off the 25.05 pin. Both are fixed; do not reintroduce.
+
+- **`ttfautohint-py` >= 0.6 shells out to the CLI**, which rejects `--epoch` (a
+  libttfautohint-only option). `options.parse_args()` returns a **dict**, so the old
+  `hasattr`/`delattr` guard was a silent no-op. `fonttools_script.py` now pops the key.
+- **FontForge 20251009 over-compresses `hmtx`.** It reads the merged Latin face as
+  monospaced and writes `numberOfHMetrics=4`; every glyph past index 4 then inherits a
+  half-width advance, which destroys 54 zero-width glyphs (combining accents, soft
+  hyphen, ZWSP) and any non-monospace advance among GSUB-only glyphs. Outlines and cmap
+  stay identical, so only an advance-width check catches it.
+  `restore_advance_widths()` in `fontforge_script.py` writes FontForge's in-memory
+  widths back after each `generate()`. `task verify:widths` is the guard.
 
 ## Font Families
 
@@ -120,8 +134,8 @@ Each family: 16 fonts (8 weights × 2 styles)
 ### Quick Start
 
 ```bash
-# Enter nix-shell
-nix-shell
+# Enter the dev shell
+nix develop
 
 # Quick test build (Regular weight only)
 task quick
@@ -139,7 +153,7 @@ task quick
 ### Common Tasks
 
 ```bash
-# Inside nix-shell
+# Inside nix develop
 task                    # Show all tasks
 task quick              # Fast build (Regular only)
 task build:console      # Build GLG-MonoConsole
@@ -161,6 +175,7 @@ task patch:nerd:all     # Patch all Console variants
 # Verification
 task verify:nerd        # Verify Nerd Fonts icons
 task verify:bearing     # Verify Korean glyph bearing (NF vs non-NF)
+task verify:widths      # Verify combining marks keep advance 0 (hmtx regression guard)
 ```
 
 ### Build Options
@@ -207,9 +222,11 @@ fontforge_script.py  - Stage 1: Font merging
 fonttools_script.py  - Stage 2: Post-processing
 fix_nf_korean_bearing.py - Stage 3: NF post-processing
 test_korean_bearing_nf.py - Korean bearing verification
+test_advance_widths.py - Zero-advance guard for combining marks (hmtx regression)
 verify_korean_complete.py - Complete Korean glyph validator
 Taskfile.yml         - Build automation
-shell.nix            - NixOS development environment
+flake.nix            - NixOS development environment (nixos-26.05 pin)
+flake.lock           - Locked nixpkgs revision (matches the host system)
 build_with_taskfile.sh - Main build script
 ```
 
@@ -247,7 +264,7 @@ ITALIC_ANGLE = 9
 ### Testing Workflow
 
 ```bash
-# Quick iteration (inside nix-shell)
+# Quick iteration (inside nix develop)
 task quick              # Build Regular weight
 task check              # Verify output
 task verify             # Check Korean/Japanese glyphs
@@ -396,7 +413,7 @@ include both marks and covered bases; GSUB multi-input ligatures cannot cross ph
 
 ### Key Principles
 
-1. **Always use nix-shell** for consistent build environment
+1. **Always use `nix develop`** for consistent build environment
 2. **Test with `task quick`** before full builds
 3. **Verify glyphs** with `task verify` after changes
 4. **Keep FONT_NAME=PlemolJP** in build.ini for compatibility
@@ -404,7 +421,7 @@ include both marks and covered bases; GSUB multi-input ligatures cannot cross ph
 
 ### Common Pitfalls
 
-- Don't run build commands outside nix-shell
+- Don't run build commands outside `nix develop`
 - Don't change `FONT_NAME` in build.ini
 - Don't forget `--do-not-delete-build-dir` for multi-variant builds
 - Stage 2 (fonttools) must run after Stage 1 (fontforge)

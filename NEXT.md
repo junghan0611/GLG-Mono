@@ -17,13 +17,28 @@ Boot sector for the next session. Durable rules live in `AGENTS.md`; design deta
 
 ## Next concrete move
 
-1. Update `shell.nix` to use the coherent generic `python3Packages` set and add Brotli. Smoke-test
-   `fontforge`, `fontTools`, `brotli` and `pyftsubset` together.
+1. ~~Dev environment~~ **done (2026-07-13)**: `shell.nix` is gone. `flake.nix` pins nixos-26.05
+   (the host system's own nixpkgs rev) with generic `python3` + fontTools + **brotli**. Enter with
+   `nix develop`. Two 26.05 toolchain breaks were found and fixed — see `AGENTS.md`.
 2. Implement one static two-tier builder. No corpus input and no frequency map.
 3. Emit 8 content-hashed WOFF2 files plus CSS, manifest, `OFL.txt` and
    `THIRD_PARTY_NOTICES.txt` under `build/web/`.
 4. Implement the exhaustive verifier, then run two deterministic builds.
 5. Report actual sizes. Integrate into a Quartz preview only after local quality gates pass.
+
+## Measured, not projected (2026-07-13)
+
+The first real WOFF2 measurement of the two-tier split, on the built Regular/Bold faces:
+
+```text
+Regular  core 520.6 KB   jp 1868.0 KB   (full face today: 2582 KB)
+Bold     core 452.6 KB   jp 1928.1 KB   (full face today: 2573 KB)
+```
+
+A Korean home page requests Regular-core + Bold-core ≈ **973 KB**, against **5,280 KB** today —
+an 82% cut. Splitting Hangul further without frequency data buys nothing: Korean text scatters
+across the syllable block, so codepoint-ordered slices all get fetched anyway. One Han character on
+a page still pulls the 1.87 MB `jp` tier; that is the known sharp edge of this design.
 
 ## Output contract
 

@@ -12,6 +12,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 import fontforge
 import psMat
+from fontTools.ttLib import TTFont
 
 # iniファイルを読み込む
 settings = configparser.ConfigParser()
@@ -207,6 +208,32 @@ def get_options():
             return
 
 
+def restore_advance_widths(font_path, widths):
+    """FontForge が hmtx を潰した分を、生成前の advance に戻す。
+
+    hmtx は先頭 numberOfHMetrics 個だけ advance を持ち、以降のグリフは最後の値を
+    継承する。FontForge 20251009 は等幅フォントとみなして numberOfHMetrics=4 まで
+    圧縮するが、それ以降にある 0 幅グリフ (結合分音記号・ソフトハイフン・ZWSP) まで
+    半角幅を継承してしまい、NFD のアクセントが 1 セット分ずれる。
+    fontTools は保存時に numberOfHMetrics を実際の advance から計算し直すので、
+    生成直後に FontForge 側の幅を書き戻せば足りる。
+    """
+    font = TTFont(font_path)
+    hmtx = font["hmtx"]
+    restored = 0
+    for glyph_name, width in widths.items():
+        if glyph_name not in hmtx.metrics:
+            continue
+        advance, lsb = hmtx.metrics[glyph_name]
+        if advance != width:
+            hmtx.metrics[glyph_name] = (int(width), lsb)
+            restored += 1
+    if restored:
+        font.save(font_path)
+        print(f"restore advance width: {restored} glyphs in {font_path}", file=sys.stderr)
+    font.close()
+
+
 def generate_font(jp_style, eng_style, merged_style):
     print(f"=== Generate {merged_style} ===")
 
@@ -308,16 +335,21 @@ def generate_font(jp_style, eng_style, merged_style):
     # ヒンティングはあとで ttfautohint で行う。
     # flags=("no-hints", "omit-instructions") を使うとヒンティングだけでなく GPOS や GSUB も削除されてしまうので使わない
     font_name = f"{FONT_NAME}{variant}".replace(" ", "")
-    eng_font.generate(
-        f"{BUILD_FONTS_DIR}/{FONTFORGE_PREFIX}{font_name}-{merged_style}-eng.ttf",
-    )
-    jp_font.generate(
-        f"{BUILD_FONTS_DIR}/{FONTFORGE_PREFIX}{font_name}-{merged_style}-jp.ttf",
-    )
+    eng_path = f"{BUILD_FONTS_DIR}/{FONTFORGE_PREFIX}{font_name}-{merged_style}-eng.ttf"
+    jp_path = f"{BUILD_FONTS_DIR}/{FONTFORGE_PREFIX}{font_name}-{merged_style}-jp.ttf"
+
+    eng_widths = {glyph.glyphname: glyph.width for glyph in eng_font.glyphs()}
+    jp_widths = {glyph.glyphname: glyph.width for glyph in jp_font.glyphs()}
+
+    eng_font.generate(eng_path)
+    jp_font.generate(jp_path)
 
     # ttfを閉じる
     jp_font.close()
     eng_font.close()
+
+    restore_advance_widths(eng_path, eng_widths)
+    restore_advance_widths(jp_path, jp_widths)
 
 
 def open_fonts(jp_style: str, eng_style: str):

@@ -99,9 +99,9 @@ def add_hinting(input_font_path, output_font_path, variant, style):
         output_font_path,
     ]
     options_ = options.parse_args(args)
-    # Remove epoch option for ttfautohint 1.8.3/1.8.4 compatibility
-    if hasattr(options_, 'epoch'):
-        delattr(options_, 'epoch')
+    # parse_args returns a dict. `epoch` is a libttfautohint-only option, and
+    # ttfautohint-py >= 0.6 shells out to the CLI, which rejects `--epoch`.
+    options_.pop("epoch", None)
     ttfautohint(**options_)
 
 

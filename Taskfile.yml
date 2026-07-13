@@ -400,6 +400,16 @@ tasks:
         font.close()
         "
 
+  verify:widths:
+    desc: 결합 부호/포맷 문자의 advance 0 검증 (hmtx 압축 회귀 방지)
+    cmds:
+      - |
+        if ! ls build/GLG-Mono*.ttf >/dev/null 2>&1; then
+          echo "❌ 폰트가 없습니다. 먼저 빌드를 실행하세요: task quick"
+          exit 1
+        fi
+        python3 test_advance_widths.py
+
   verify:bearing:
     desc: 한글 bearing 검증 (NF vs non-NF 비교)
     cmds:

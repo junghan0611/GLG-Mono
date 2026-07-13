@@ -63,7 +63,7 @@ OUTPUT:
     build/nerd/GLG-Mono*Console-*.ttf - Nerd Fonts variants
 
 REQUIREMENTS:
-    - Run inside nix-shell for proper environment
+    - Run inside 'nix develop' for proper environment
     - Taskfile.yml must exist in current directory
 
 For more information, see BUILD_GUIDE.md or run 'task' for available tasks.
@@ -124,7 +124,7 @@ fi
 # Check if task is available
 if ! command -v task &> /dev/null; then
     echo "❌ Error: 'task' command not found."
-    echo "Please run inside nix-shell or install go-task."
+    echo "Please run inside 'nix develop' or install go-task."
     exit 1
 fi
 
