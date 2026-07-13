@@ -21,7 +21,6 @@ import json
 import os
 import shutil
 import sys
-from datetime import datetime, timezone
 
 from fontTools import subset
 from fontTools.ttLib import TTFont
@@ -48,15 +47,35 @@ JP_RANGES = [
     (0x20000, 0x3FFFF),  # SIP: ideographic extensions
 ]
 
-# The one deliberate exclusion from the web profile: Powerline and private-use glyphs
-# that a web page has no way to ask for.
+# The one deliberate exclusion from the web profile: the Powerline separators and the
+# private-use glyphs a web page has no way to ask for. Named one by one, not by range: a
+# range would silently swallow any PUA codepoint a future build adds, and the contract
+# says these fourteen and nothing else.
+EXCLUDED_PUA = frozenset({
+    0xE0A0, 0xE0A1, 0xE0A2, 0xE0B0, 0xE0B1, 0xE0B2, 0xE0B3,
+    0xF6D7, 0xF6D8, 0xF860, 0xF861, 0xF862, 0xF87A, 0xF87F,
+})
 PUA_RANGES = [(0xE000, 0xF8FF), (0xF0000, 0xFFFFD), (0x100000, 0x10FFFD)]
 
-LICENCE_FILES = {"OFL.txt": "LICENSE"}
+LICENCE_FILES = {"OFL.txt": "LICENSE", "HACK-LICENSE.txt": "source/hack/LICENSE"}
 
 
 def in_ranges(codepoint, ranges):
     return any(lo <= codepoint <= hi for lo, hi in ranges)
+
+
+def excluded_pua(font):
+    """The fourteen, verified — a new PUA codepoint must be a decision, not a surprise."""
+    present = {c for c in font.getBestCmap() if in_ranges(c, PUA_RANGES)}
+    if present != EXCLUDED_PUA:
+        added = sorted(f"U+{c:04X}" for c in present - EXCLUDED_PUA)
+        gone = sorted(f"U+{c:04X}" for c in EXCLUDED_PUA - present)
+        raise SystemExit(
+            "the font's private-use codepoints no longer match the web profile's "
+            f"declared exclusion (added: {added or 'none'}, missing: {gone or 'none'}). "
+            "Decide what the web build should do with them and update EXCLUDED_PUA."
+        )
+    return present
 
 
 class Clusters:
@@ -140,7 +159,7 @@ def shaping_clusters(font, reverse_cmap):
 def partition(font):
     """Split this face's cmap into (core, jp, excluded PUA)."""
     cmap = set(font.getBestCmap())
-    pua = {c for c in cmap if in_ranges(c, PUA_RANGES)}
+    pua = excluded_pua(font)
     web = cmap - pua
 
     core = {c for c in web if not in_ranges(c, JP_RANGES)}
@@ -241,6 +260,12 @@ def content_hash(path):
 
 
 def write_licences(out_dir):
+    """Ship the licences, not a gesture at them.
+
+    Four copyrights ride in nameID 0 and every one of them has terms attached. Hack is MIT
+    and carries Bitstream Vera's reserved-font-name notice, which must travel with the
+    binary — a subset is still a derived work of all of it.
+    """
     for target, source in LICENCE_FILES.items():
         shutil.copyfile(source, os.path.join(out_dir, target))
 
@@ -250,13 +275,24 @@ def write_licences(out_dir):
     url = font["name"].getDebugName(14)
     font.close()
 
+    hack_licence = open("source/hack/LICENSE", encoding="utf-8").read().strip()
+
     with open(os.path.join(out_dir, "THIRD_PARTY_NOTICES.txt"), "w", encoding="utf-8") as out:
         out.write("GLG-Mono web fonts — third party notices\n")
         out.write("=" * 39 + "\n\n")
-        out.write("These WOFF2 files are subsets of GLG-Mono and carry the same rights\n")
-        out.write("and obligations as the full font.\n\n")
+        out.write("These WOFF2 files are subsets of GLG-Mono. Subsetting removes glyphs; it\n")
+        out.write("removes no obligations. Every notice below applies to them in full.\n\n")
+        out.write("Copyright notices carried in the font (nameID 0)\n")
+        out.write("-" * 47 + "\n\n")
         out.write(notice + "\n\n")
-        out.write(licence + "\n\n" + url + "\n")
+        out.write("IBM Plex and PlemolJP — SIL Open Font License 1.1\n")
+        out.write("-" * 49 + "\n\n")
+        out.write(licence + "\n\n")
+        out.write(f"Full text: OFL.txt in this directory, and {url}\n\n")
+        out.write("Hack, DejaVu and Bitstream Vera\n")
+        out.write("-" * 31 + "\n\n")
+        out.write(hack_licence + "\n\n")
+        out.write("Full text: HACK-LICENSE.txt in this directory.\n")
 
 
 def main():
@@ -276,9 +312,11 @@ def main():
 
     manifest = {
         "family": FAMILY,
-        "generated_from": "build/GLG-Mono-{face}.ttf",
+        "generated_from": SOURCE,
         "tiers": ["core", "jp"],
-        "excluded_pua": [],
+        # No build timestamp: the manifest is part of the distribution and the
+        # distribution must hash the same on every run.
+        "excluded_pua": sorted(f"U+{c:04X}" for c in EXCLUDED_PUA),
         "faces": {},
     }
     css = [
@@ -296,7 +334,6 @@ def main():
         core, jp, pua, moved = partition(font)
         font.close()
 
-        manifest["excluded_pua"] = sorted(f"U+{c:04X}" for c in pua)
         manifest["faces"][face] = {"weight": attrs["weight"], "style": attrs["style"],
                                    "tiers": {}}
 
@@ -329,7 +366,6 @@ def main():
                   f"{f'  (+{len(moved)} pulled from jp)' if tier == 'core' and moved else ''}")
 
     manifest["total_bytes"] = total
-    manifest["built_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with open(os.path.join(staging, "manifest.json"), "w", encoding="utf-8") as out:
         json.dump(manifest, out, indent=2, ensure_ascii=False)
         out.write("\n")

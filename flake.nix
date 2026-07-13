@@ -28,6 +28,7 @@
             python3Packages.fonttools
             python3Packages.brotli
             python3Packages.ttfautohint-py
+            python3Packages.uharfbuzz   # web verifier: shape with the real engine, not a model
 
             ttfautohint
             go-task

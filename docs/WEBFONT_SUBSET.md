@@ -108,8 +108,12 @@ Every generated face/tier must pass:
    is four type-4 mark-to-base lookups whose marks and bases are all Latin/Cyrillic, so they land
    in `core` and never straddle the boundary — but the builder must derive that, not assume it:
    bind each `MarkBasePos` subtable's encoded `MarkCoverage ∪ BaseCoverage` into one component.
-   GSUB is type 1/3/4 only; a type-4 ligature's input sequence must not cross tiers. If a
-   contextual type 5/6 or an extension lookup ever appears, **fail closed** rather than ignore it.
+   GSUB is type 1/3/4 **and chained-contextual type 6**; a type-4 ligature's input sequence
+   must not cross tiers. An unknown lookup type must **fail closed**, never be ignored.
+   None of this is taken on trust: the verifier reads the rules back out of the shipped
+   WOFF2 and compares them against the source's projection onto that tier, then shapes
+   every ligature and mark/base pair the font declares through HarfBuzz twice — once with
+   the source, once with the tier — and demands the same glyphs and positions.
 6. **Global tables** — preserve `BASE`. `pyftsubset` drops unknown tables by default, so
    `--passthrough-tables` is required and the result must be verified binary-identical.
 7. **Licensing** — `pyftsubset` keeps only nameIDs 0–6 by default, dropping 13/14. Pass
