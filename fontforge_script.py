@@ -651,8 +651,11 @@ def materialize_altuni_glyphs(font, entity_glyph_unicode_list):
 
     # alt_uni 処理後、エンコーディングがずれるためか一部のグリフの select() がうまくいかなくなるので開き直す
     font_path = f"{BUILD_FONTS_DIR}/{font.fullname}_{uuid.uuid4()}.ttf"
+    widths = {glyph.glyphname: glyph.width for glyph in font.glyphs()}
     font.generate(font_path)
     font.close()
+    # ttf を経由するので hmtx が潰れうる。開き直す前に戻す。
+    restore_advance_widths(font_path, widths)
     font = fontforge.open(font_path)
     # 一時ファイルを削除
     os.remove(font_path)
@@ -992,8 +995,14 @@ def merge_hack(jp_font, eng_font, style):
             glyph.width = half_width
     # Hack フォントをオブジェクトとして扱いたくないので、一旦ファイル保存して直接マージする
     font_path = f"{BUILD_FONTS_DIR}/tmp_hack_{uuid.uuid4()}.ttf"
+    hack_widths = {glyph.glyphname: glyph.width for glyph in hack_font.glyphs()}
     hack_font.generate(font_path)
     hack_font.close()
+
+    # Hack も等幅なので hmtx が潰れる。Hack-Bold だけが持つ 0 幅の結合分音記号
+    # (U+0305, U+030D-U+0361) が半角幅を継承し、eng 側にその幅で取り込まれてしまう。
+    # Bold / BoldItalic だけ結合記号が崩れるのはこれが原因。
+    restore_advance_widths(font_path, hack_widths)
 
     eng_font.mergeFonts(font_path)
     os.remove(font_path)

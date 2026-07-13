@@ -10,3 +10,6 @@ __pycache__/
 .claude/
 .vscode/
 nerd_patch.log
+
+# Build logs
+build_full.log
