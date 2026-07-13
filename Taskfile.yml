@@ -400,6 +400,29 @@ tasks:
         font.close()
         "
 
+  web:build:
+    desc: 웹폰트 빌드 (4 face × {core,jp} = WOFF2 8개)
+    cmds:
+      - |
+        for face in Regular Bold Italic BoldItalic; do
+          if [ ! -f "build/GLG-Mono-$face.ttf" ]; then
+            echo "❌ build/GLG-Mono-$face.ttf 없음. 먼저 Console 빌드: ./build_console_all.sh"
+            exit 1
+          fi
+        done
+        python3 webfont_subset.py
+
+  web:verify:
+    desc: 웹폰트 검증 (커버리지·기하·힌팅·메트릭·셰이핑·라이선스·결정성)
+    cmds:
+      - python3 webfont_verify.py
+
+  web:all:
+    desc: 웹폰트 빌드 + 검증
+    cmds:
+      - task: web:build
+      - task: web:verify
+
   verify:widths:
     desc: 결합 부호/포맷 문자의 advance 0 검증 (hmtx 압축 회귀 방지)
     cmds:

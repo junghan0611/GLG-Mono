@@ -1,6 +1,6 @@
 # Web Font Delivery — Two-Tier Design
 
-Status: **direction reset; implementation not started** (2026-07-13)
+Status: **implemented; all gates green** (2026-07-13). Build with `task web:all`.
 
 This design changes only the web deliverable. The inherited PlemolJP desktop build remains intact:
 IBM Plex Sans JP stays the base, and desktop TTF/NF releases retain their complete coverage.
@@ -157,6 +157,23 @@ task web:verify
 task web:all       # build + verify, no corpus dependency
 ```
 
+## How the stylesheet declares its ranges
+
+`core` is declared exactly — 229 spans, about 2 KB per face.
+
+`jp` is declared as the **blocks it stands for**, not as its exact cmap. Stating the jp cmap
+precisely takes 4,664 spans, because the font fills the CJK blocks unevenly: 50 KB per face,
+200 KB across the four. The garden bundles its stylesheet into one render-blocking `index.css`
+(39 KB today), so that would move the weight we came to remove out of the font and into the CSS.
+
+The cost of declaring the blocks whole is that the font does not contain every ideograph in them.
+For a missing one the browser fetches the jp tier and then falls back to a system font — a wasted
+request, never a wrong glyph, and a page whose only CJK is an ideograph this font lacks would have
+had to fall back anyway. Codepoints that shaping pulls into `core` are punched out of the jp range,
+so the tiers never claim the same character; the verifier checks that.
+
+Measured: 210.5 KB of CSS becomes 11.3 KB (1.1 KB brotli).
+
 ## Performance gate
 
 Earlier 65 KiB Hangul and 175 KB homepage figures belonged to the discarded many-chunk prototype
@@ -164,17 +181,18 @@ and are invalid here. The numbers below are **measured**, by subsetting the buil
 to the two tiers and encoding real WOFF2:
 
 ```text
-Regular   core   520.6 KB   jp  1868.0 KB     full face today: 2582 KB
-Bold      core   452.6 KB   jp  1928.1 KB     full face today: 2573 KB
+Regular     core   569.3 KB   jp  1900.3 KB     full face today: 2582 KB
+Bold        core   500.6 KB   jp  1958.9 KB     full face today: 2573 KB
+Italic      core   622.8 KB   jp  2048.1 KB
+BoldItalic  core   548.3 KB   jp  2129.4 KB
 ```
 
-Korean home page = Regular-core + Bold-core ≈ **973 KB**, against **5,280 KB** today. That is the
+Korean home page = Regular-core + Bold-core = **1,070 KB**, against **5,280 KB** today, an 80% cut.
+(The earlier 973 KB estimate omitted the `post` glyph names, which the pipeline keeps so that
+verification can address glyphs by name.) That is the
 honest ceiling of a corpus-free design: Hangul cannot be split further without frequency data,
 because Korean text scatters across the syllable block and would fetch every codepoint-ordered
 slice anyway. A page containing even one Han character still pulls the 1.87 MB `jp` tier.
-
-These are pipeline measurements, not a shipped result. Treat them as the size budget the real build
-must reproduce, and re-measure the Italic faces when they are cut.
 
 After building:
 
