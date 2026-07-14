@@ -38,26 +38,73 @@ PlemolKR (2024, soomtong)
   - Korean programming font
     ↓
 GLG-Mono (2025, junghan0611)
-  - Knowledge management & AI collaboration font
-  - Korean-first repertoire: Hangul + Hanja + Latin + coding symbols
-  - 8-Layer ecosystem integration
+  - 힣's own working font: an owned, observable Unicode assembly
+  - Layers: Latin/coding (Plex Mono) + Korean (Plex Sans KR) + Hanja seed + symbols
 ```
 
 **Upstream**: <https://github.com/yuru7/PlemolJP> — a *Japanese* programming font. This repo is a
 fork of it, which is why IBM Plex Sans JP is present and why the v1 build is structured around it.
 Upstream has had no updates since 2025-06; we do not track it.
 
-### v2 North Star — Korean-first layered assembly
+### v2 North Star — an owned, observable Unicode assembly
 
-- Product layers are explicit: IBM Plex Sans KR supplies Hangul, IBM Plex Mono supplies Latin,
-  a pinned Korean profile defines Hanja, and Plex Mono/Hack/custom/Nerd layers supply symbols.
-- The first Hanja profile is Source Han Sans KR 2.005's **8,567 BMP ideograph mappings**. Its 84
-  supplementary mappings deliberately fall back in v2-A. Repertoire is generated from pinned
-  provenance, never education policy, hand curation or the garden corpus.
-- IBM Plex Sans JP may supply profile-matching outlines during the low-risk v2-A proof, but JP is
-  heritage/donor, not product identity. Kana, Bopomofo and Japanese regional features are excluded.
-- If the inherited JP-base pipeline cannot produce that clean output without fragile exceptions,
-  stop and move to v2-B neutral/KR-first assembly. Design: `docs/V2_KOREAN_PROFILE.md`.
+> GLG-Mono is a font for 힣's own working environment. It publishes its supported range as an
+> exact Unicode cmap, traces every codepoint to an owner, and lets no undeclared character into
+> the build.
+
+GLG-Mono represents no standard and claims no canonical Hanja repertoire. Chasing "a complete CJK
+font" is what makes this codebase explode; being able to *see and own* what is inside it is the
+product. Three questions replace every standards argument:
+
+1. which codepoints does the font support right now,
+2. which source does each glyph come from,
+3. does anything unexpected arrive when a layer is added or removed.
+
+**Exact cmap is the SSOT.** Block ranges and the Emacs fontset form are *generated outputs* of it,
+never the source of truth. Unicode blocks lie: U+3200 and U+3300 each mix Korean letters, Japanese
+forms and unit symbols in one block, so no block-level rule is safe. Only codepoint-level
+allowlists are.
+
+**Layer ownership** (higher wins a contested codepoint):
+
+```text
+custom adjustments (AdjustedGlyphs)
+> IBM Plex Mono        — Latin, coding symbols
+> IBM Plex Sans KR     — Hangul and every Korean support character it carries
+> IBM Plex Sans JP     — the selected Hanja seed, and nothing else
+> Hack                 — supplementary glyphs
+> Nerd Fonts           — NF variants only
+```
+
+The JP layer is admitted for Hanja codepoints only. That single rule dissolves the classification
+problem: we never have to argue which character is "Japanese-only", because Kana, radicals,
+enclosed forms and Japanese GSUB have no path in.
+
+**Hanja seed** — the 8,567 BMP ideographs of Source Han Sans KR 2.005 are the **GLG-Mono Hanja
+seed**, not a standard and not canonical. The JP donor draws 7,686 directly and 250 through
+compatibility aliases, so the font claims **7,936**; the remaining 631 fall back to another font,
+and unsupported Hanja is simply Hanja 힣 does not type. Seed membership is generated from a pinned
+artifact — never from education policy, hand curation or the garden corpus.
+
+**The gate that keeps the font clean** — every build emits four sets and an owner map:
+
+```text
+missing    = expected − actual   must be 0
+unexpected = actual − expected   must be 0
+```
+
+Measured today (Regular): base layers hold 13,563 codepoints with zero Han, yet the shipped font has
+27,846. It **drops 163 codepoints Plex Sans KR provides** (including `￦` U+FFE6 and `㈜` U+321C,
+because `merge_kr_glyphs()` copies only four Hangul ranges). Against the exact 21,499-codepoint
+contract, the current face has 413 missing (those 163 plus 250 aliases not yet created) and 6,760
+unexpected (1,424 non-Han plus 5,336 Han outside the claimed set). Design:
+`docs/V2_CMAP_CONTRACT.md`.
+
+### Language discipline
+
+Say **seed**, **owner**, **allowlist**. Do not say standard, canonical, or 국가표준 — GLG-Mono
+justifies its repertoire by ownership, not by authority. Excluded ideographs are **outside the
+seed**, not "Japanese-only".
 
 ## Development Environment
 
@@ -341,20 +388,31 @@ git push origin main
 ### Font Composition and Provenance
 
 **Current v1 fact:** `fontforge_script.py:214` opens IBM Plex Sans JP as `jp_font` and merges Korean
-onto it. That inherited implementation explains the shipped **13,412 Han glyphs and 189 Kana**; it
-is not the v2 product contract. v2 owns only its declared Korean-first repertoire. In v2-A, JP may
-remain the internal assembly vehicle and Hanja outline donor only if the output inventory, layout
-and metrics are clean. Otherwise activate the v2-B neutral/KR-first assembly described in
-`docs/V2_KOREAN_PROFILE.md`.
+onto it, which is why the shipped face carries **13,022 Han and 263 Kana**. The inherited assembly
+is subtractive — it inherits everything JP has and then removes — and that is exactly what the v2
+contract inverts. It is not the product contract.
 
-- Repertoire and donor are independent. A donor swap may preserve profile topology but changes
-  provenance, outlines, geometry goldens and visual proof. Neither JP nor TC is Korean-canonical by
-  assumption.
+- **The JP-base merge does not merely carry Japanese baggage; it drops Korean.**
+  `merge_kr_glyphs()` (`:361`) copies Plex Sans KR from four ranges only — `AC00-D7A3`,
+  `3131-318E`, `A960-A97F`, `D7B0-D7FF` — so every other Korean character KR provides is discarded:
+  163 codepoints, including `￦` (U+FFE6) and `㈜` (U+321C). Any gate that only asks "did Japanese
+  leave?" misses this; the cmap diff gate asks both directions.
+- Assembly must become **allowlist-first**: subset each donor to its owned codepoints with
+  fontTools (which computes layout closure), then let FontForge do geometry. The verifier—not the
+  subsetter—fails closed on unknown rules and unexpected output. A blocklist of Japanese features
+  (`jp78`, `hkna`, `ruby`, …) is the fragile exception we refuse —
+  a donor version bump can extend it behind our back.
+- The base font choice stops being philosophy and becomes an implementation detail: whichever
+  assembly makes `missing == 0 && unexpected == 0` hold without fragile exceptions is the right one.
 - Italic builds currently use `jp_style="Regular", eng_style="Italic"` (`:131`). Latin is IBM Plex
   Mono's **true italic**; retained CJK is algorithmic `skew(9°) + translate(-40, 0)` oblique. v2
   must preserve the physical Italic/BoldItalic faces while removing Japanese width sentinels.
 - `merge_hack()` runs in the **core build**, independent of `--skip-nerd`; Hack glyphs are in every
   face.
+- Measured: GPOS is already clean (`remove_lookups(remove_gpos=True)` at `:263` leaves only `mark`,
+  four type-4 lookups), and **neither donor nor build has a cmap format 14 / UVS table**. The
+  surviving Japanese coupling is **GSUB only** — 44 features, 73 lookups, 7 chained-contextual —
+  plus 7,841 unencoded glyphs. Assert UVS stays absent; do not spend design on it.
 
 **Four copyrights live in nameID 0** — IBM Plex, Hack (Source Foundry; MIT + Bitstream Vera),
 Nerd Fonts (Ryan L McIntyre), PlemolJP (Yuko Otawara). Refactoring repertoire does not erase legal
@@ -362,10 +420,10 @@ provenance. `pyftsubset` silently drops nameID 0/13/14 unless given `--name-IDs=
 
 ### Web Fonts
 
-Desktop and web have different coverage contracts. Desktop v2 carries the Korean BMP Hanja profile
-that its donor can render; web WOFF2 intentionally carries **no Han and no Japanese syllabaries**.
-A system or remote CJK fallback owns Han on the web, where readable non-tofu output—not parity with
-the desktop donor—is the acceptance bar.
+Desktop and web have different coverage contracts. Desktop v2 carries the Hanja seed its donor can
+render; web WOFF2 intentionally carries **no Han and no Japanese syllabaries**. A system or remote
+CJK fallback owns Han on the web, where readable non-tofu output—not parity with the desktop
+donor—is the acceptance bar. Both contracts publish an exact cmap; only their content differs.
 
 The final topology is four physical faces: Regular, Bold, Italic and BoldItalic. Ordinary Korean
 pages request only Regular and Bold. The verified 8-file `{core,jp}` build remains a superseded

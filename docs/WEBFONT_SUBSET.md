@@ -4,14 +4,14 @@ Status: **four-face fallback contract approved; implementation pending** (2026-0
 8-file build is an experimental baseline, not the final delivery contract.
 
 This work changes only the web deliverable and does not wait for the desktop v2 migration. Desktop
-product direction lives in `V2_KOREAN_PROFILE.md`.
+product direction lives in `V2_CMAP_CONTRACT.md`.
 
 ## 2026-07-14 decision
 
 The web build emits four physical GLG faces—Regular, Bold, Italic and BoldItalic—and claims neither
 Han nor Japanese syllabaries. A system or remote CJK fallback renders Han. Readable, non-tofu Han is
 sufficient on the web; matching GLG's desktop donor outlines is not. This avoids fetching an entire
-~2 MB `jp` face for one `脈` or `如` and removes Kana that is outside the Korean-first product scope.
+~2 MB `jp` face for one `脈` or `如` and removes Kana, which no layer of the product declares.
 
 Do not replace the coarse Han tier with corpus-trained or frequency-ordered chunks. Before coding,
 prove fallback in the notes browser checkpoint and state artifact count, ordinary-page request
