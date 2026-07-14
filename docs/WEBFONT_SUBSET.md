@@ -1,13 +1,31 @@
-# Web Font Delivery — Two-Tier Design
+# Web Font Delivery — Han Fallback Redesign
 
-Status: **implemented; all gates green** (2026-07-13). Build with `task web:all`.
+Status: **redesign approved; implementation pending** (2026-07-14). The verified 8-file build is
+an experimental baseline, not the final delivery contract.
 
-This design changes only the web deliverable. The inherited PlemolJP desktop build remains intact:
-IBM Plex Sans JP stays the base, and desktop TTF/NF releases retain their complete coverage.
+This work changes only the web deliverable. The inherited PlemolJP desktop build remains intact:
+IBM Plex Sans JP stays the base, and desktop TTF/NF releases retain their complete coverage,
+including all Han.
 
-## Contract
+## 2026-07-14 decision
 
-The build emits exactly **8 WOFF2 files**: two tiers for each existing face.
+The custom web faces may omit Han and delegate those codepoints to a CJK fallback. Readable,
+non-tofu Han is sufficient on the web; matching GLG's inherited desktop Han outlines is not. This
+avoids fetching an entire ~2 MB `jp` face for one `脈` or `如`. Kana is not part of this exclusion
+and must remain in the supported web profile unless GLG explicitly changes that contract.
+
+Do not replace the coarse Han tier with corpus-trained or frequency-ordered chunks. Before coding,
+prove the fallback in the notes browser checkpoint, then state the new artifact count, ordinary-page
+request count, intentional exclusion set and fallback owner. Preserve the four physical
+Regular/Bold/Italic/BoldItalic faces and every existing verifier guarantee for the supported web
+profile.
+
+The remainder of this document describes the current two-tier implementation and its verifier. It
+is the baseline to modify, not a contract to ship unchanged.
+
+## Superseded two-tier baseline
+
+The current build emits exactly **8 WOFF2 files**: two tiers for each existing face.
 
 ```text
 GLG-Mono-Regular-core.<hash>.woff2

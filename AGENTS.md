@@ -348,18 +348,23 @@ Nerd Fonts (Ryan L McIntyre), PlemolJP (Yuko Otawara). Any derived artifact must
 
 ### Web Fonts
 
-The full font is 2.6 MB per face as WOFF2 (lossless Brotli of a 27,846-codepoint font). Shipping it
-whole to a website is not viable. The approved web-delivery contract is deliberately small:
-**4 faces × `{core,jp}` = exactly 8 WOFF2 files**. A normal Korean home page should request only
-Regular-core and Bold-core. Design and acceptance gates: **`docs/WEBFONT_SUBSET.md`**.
+Desktop and web have different coverage contracts. **Desktop TTF/NF keeps all inherited Han**;
+never remove it from the source build or restructure the JP base for a payload optimization. Web
+WOFF2 may intentionally omit Han and let a CJK fallback render it: readable, non-tofu output is the
+web acceptance bar, not pixel parity with the desktop Han outlines.
+
+The verified 8-file `{core,jp}` build is now a superseded baseline: one Han character fetches an
+entire ~2 MB `jp` face. The next web contract removes that Han payload while retaining four physical
+Regular/Bold/Italic/BoldItalic faces, Kana and required shaping inputs. Before changing topology,
+state artifact count, normal-page request count, intentional exclusions and fallback owner; obtain
+GLG approval for any later change. Design status and acceptance gates: **`docs/WEBFONT_SUBSET.md`**.
 
 Do not reintroduce corpus-trained Hangul/Han frequency slicing or dozens of outputs. A discarded
 192-file prototype proved that approach can minimize transfer but violates this repository's
-cleanup and maintainability goal.
-
-Subsetting must preserve the v1.0.0 Korean bearing fix, physical Italic/BoldItalic outlines,
-vertical metrics, hinting, `BASE`, legal name records and cross-codepoint shaping. GPOS mark inputs
-include both marks and covered bases; GSUB multi-input ligatures cannot cross physical tiers.
+cleanup and maintainability goal. Subsetting must preserve the v1.0.0 Korean bearing fix, physical
+Italic/BoldItalic outlines, vertical metrics, hinting, `BASE`, legal names and supported-profile
+shaping. GPOS mark inputs include both marks and covered bases; GSUB multi-input ligatures cannot
+cross physical files.
 
 ### Glyph Handling
 

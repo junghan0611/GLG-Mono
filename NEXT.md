@@ -1,107 +1,68 @@
 # NEXT — GLG-Mono
 
-Boot sector for the next session. Durable rules live in `AGENTS.md`; design detail lives in
-`docs/WEBFONT_SUBSET.md`.
+Boot sector for the next session. Durable rules live in `AGENTS.md`; the current implementation
+baseline and verifier contract live in `docs/WEBFONT_SUBSET.md`.
 
-# NOW — webfont delivery complete; measured feedback pending
+# NOW — keep desktop Han; delegate web Han to fallback
 
-- **Result**: the garden's ordinary Korean page font payload fell from 5,280 KB to **1,070 KB**
-  (80% off): eight WOFF2 files, no corpus and no chunking; Regular-core + Bold-core are the normal
-  two requests.
-- **Proof**: `task web:all` is green across all four faces; `task web:test-gates` plants fourteen
-  defects and catches all fourteen. The full verifier compares shipped layout rules, thousands of
-  HarfBuzz strings and all thirteen distribution files deterministically.
-- **Delivery**: `~/repos/gh/notes` owns a deterministic `scripts/sync-webfonts.sh`; GLG visually
-  confirmed the local garden. The integration remains uncommitted while its performance evaluation
-  finishes.
-- **Provisional measurement**: a page with no Han requests **1,072 KB** as intended, but one Han
-  character pulls an entire ~2 MB `jp` face. The current homepage (`脈`) measured **3,031 KB**; a
-  sparse-Han note (`如`) measured **5,556 KB**. 263/2,245 notes contain Han and 167 of those contain
-  five or fewer. The eight-file contract therefore wins broadly but misses the sparse-Han case.
+- **Decision (2026-07-14)**: desktop TTF/NF remains complete, including all inherited Han. The
+  size-driven exclusion applies **only to the web WOFF2 deliverable**. Never remove Han from the
+  source build or restructure the PlemolJP/IBM Plex Sans JP base for this work.
+- **Web contract**: GLG web faces no longer need to carry Han. A browser/system or remote CJK
+  fallback may render Han; readable, non-tofu output is sufficient, and pixel parity with the
+  desktop GLG Han outlines is not required on the web.
+- **Why**: the verified 8-file `{core,jp}` experiment makes a no-Han page 5,280 KB → 1,072 KB, but
+  one Han character opens an entire ~2 MB face. Homepage `脈` measured 3,031 KB and a sparse-Han
+  `如` note measured 5,556 KB.
+- **State**: GLG-Mono is clean and pushed. `~/repos/gh/notes` contains the 8-file integration as an
+  intentionally uncommitted browser checkpoint; do not commit or discard it before the A/B proof.
 
-## Next concrete move — decide the sparse-Han tradeoff from final measurements
+## Next concrete move — prove Han fallback, then replace the web contract
 
-1. Finish the notes-side waterfall/LCP/CLS report; keep its integration checkpoint uncommitted.
-2. Re-evaluate the deliberate eight-file/no-frequency contract against the sparse-Han measurements.
-   Compare bounded alternatives before coding: accept the tail, add one standardized common-Han
-   tier, or reopen chunking. Do **not** revive the discarded 192-file corpus prototype by default.
-3. After GLG explicitly chooses a contract, make the smallest web-layer change, run
-   `task web:test-gates` and `task web:all`, then re-sync and remeasure notes.
-4. Cleanup and the KR-first rewrite remain separate work; roadmap:
-   <https://github.com/junghan0611/GLG-Mono/issues/2>.
+1. In the notes checkpoint, temporarily stop declaring the `*-jp` faces and add an explicit CJK
+   fallback after `"GLG Mono"`. Try installed system CJK fonts first; use a range-split remote font
+   such as Noto Sans KR only if system rendering is inconsistent or produces tofu.
+2. Browser-check the homepage `脈` and the sparse-Han `如` note. Record requested WOFF2 files,
+   transfer bytes, screenshots, and whether normal/bold Han remains readable. Also check a Kana
+   canary: the decision excludes Han, not Japanese syllabaries by accident.
+3. If the proof passes, revise `docs/WEBFONT_SUBSET.md`, then change only the web builder/verifier:
+   - emit four physical GLG faces with Han absent from their cmap/CSS claim;
+   - retain Kana and required cross-codepoint shaping inputs in the supported web profile;
+   - declare the intentional Han fallback set in the manifest;
+   - verify excluded Han is not claimed, supported web glyphs preserve geometry/layout, and the
+     desktop TTF cmap/artifacts are untouched.
+4. Run `task web:test-gates`, then `task web:all` once as the release checkpoint. Re-sync notes,
+   repeat the two browser measurements, and commit the notes integration only after GLG approves
+   the rendering and payload.
 
-## What the verifier actually checks
+## Acceptance
 
-`webfont_verify.py` reads the **shipped WOFF2**, not the source it came from. An earlier version
-checked the source and let a face with GSUB deleted pass green — the reason every gate below is now
-stated in terms of the delivered file.
-
-| Gate | What it would catch |
-|---|---|
-| coverage | a codepoint lost or duplicated across tiers |
-| geometry | an outline, advance or LSB that moved |
-| hinting | glyph bytecode or `cvt`/`fpgm`/`prep`/`gasp` altered |
-| metrics | vertical metrics or `xAvgCharWidth` drifting (field-level; `numberOfHMetrics` must change) |
-| tables | `BASE` dropped — `pyftsubset` discards unknown tables by default |
-| layout | a substitution, mark-attachment or **chained-context record** missing or rewired |
-| shaping | HarfBuzz shaping the tier differently from the full font, across 3,233 derived canaries |
-| stylesheet | a bad URL, a range that does not cover the file, tiers both claiming a character, `font-synthesis` |
-| manifest | a file whose bytes no longer match its content-hashed name, or a wrong `total_bytes` |
-| determinism | a rebuild that does not reproduce all 13 files byte for byte |
-
-`task web:test-gates` (`test_webfont_gates.py`, ~24 s) plants **fourteen** defects and demands a
-FAIL for each. Add a gate only with the mutation that proves it bites. The full sweep walks every
-outline and shapes thousands of strings, so never run it per mutation — `--faces Regular
---gates <gate>` keeps a probe at ~1 s.
-
-## Verified traps — carry forward
-
-- `pyftsubset` drops nameID 0/13/14 unless given `--name-IDs='*' --name-legacy`.
-- `--drop-tables=` does not preserve unknown `BASE`; `--passthrough-tables` does.
-- **HarfBuzz cannot read WOFF2.** Decompress before shaping, or every glyph comes back `.notdef`.
-- The font has **chained-contextual GSUB (type 6)**, not just types 1/3/4. An unknown lookup type
-  must fail the build, not be skipped.
-- **A type-6 rule is its `SubstLookupRecord`, not its coverage.** Delete the record and the context
-  still matches, substituting nothing; coverage compares equal and the loss is invisible. Lookup 25
-  (`ccmp`, invokes lookup 26) has coverage *identical* to lookup 29, which has no records at all —
-  so a coverage-keyed rule set cannot even tell them apart. The layout gate spells each record out
-  as `(SequenceIndex, rules of the lookup it names)`.
-- **HarfBuzz composes before it lays out**, so shaping cannot stand in for that. `d` + U+030C
-  becomes precomposed `dcaron` and the caron chain never fires; `g` + U+0326 and `j` + U+0300 have
-  no precomposed form, fire, and are caught. A rule no text can reach still must not be dropped.
-- Declaring the jp tier's exact cmap costs 4,664 `unicode-range` spans — 200 KB of render-blocking
-  CSS. The blocks are declared whole instead; a missing ideograph costs a wasted request, never a
-  wrong glyph.
-- Content-hashed names are mandatory: notes serves WOFF2 immutable for a year.
+- Desktop TTF/NF keeps all inherited Han and existing build parity; no desktop pipeline edits.
+- Homepage `脈` and note `如` request no GLG `jp` WOFF2 and display no tofu.
+- A normal Korean page still requests only Regular and Bold GLG core faces; Italic/BoldItalic stay
+  physical and load only when used.
+- Kana, Hangul/Jamo, punctuation, symbols, hinting, metrics, legal names, `BASE`, GSUB/GPOS and
+  deterministic content hashes remain guarded.
+- The final web topology is stated before coding: artifact count, normal-page requests, intentional
+  exclusions and fallback owner. Any later topology change requires GLG approval.
 
 ## Stop conditions
 
-- Do not restructure away from the inherited PlemolJP/IBM Plex Sans JP base. A KR-based rewrite is
-  a v2 with golden parity, not a cleanup.
-- Do not add corpus-trained data, frequency slices, or more than 8 WOFF2 outputs.
-- Do not "fix" the 27 IBM Plex Sans JP combining marks that are full-width. They have been wrong
-  since v1.0.0, they have no GPOS mark lookup, and setting their advance to 0 without anchors would
-  trade one rendering defect for another. Separate decision, separate canaries.
-- Do not interpret notes-side PageSpeed work as permission to reopen the desktop font pipeline;
-  measured font regressions return through the web-layer gates above.
+- Do not remove Han from source fonts, desktop TTF/NF, or the inherited JP base.
+- Do not revive corpus-trained frequency maps, Han frequency tiers, or the discarded 192-file
+  prototype. Han fallback replaces that complexity.
+- Do not hand-edit generated notes SCSS as the final fix; the builder/sync path must own it.
+- Do not commit the current notes 8-file checkpoint as the final delivery.
+- Cleanup and the KR-first rewrite remain separate work:
+  <https://github.com/junghan0611/GLG-Mono/issues/2>.
 
 # RECENT
 
-- [2026-07-13] Notes integration — visual rendering is good and no-Han pages reach 1.07 MB, but
-  measured sparse-Han pages pull 2 MB `jp` faces (homepage 3.03 MB; one test note 5.56 MB). Notes
-  keeps the integration uncommitted while the delivery contract is reconsidered.
-- [2026-07-13] Type-6 hardening — chained-context records are projected by their invoked lookup
-  semantics, reachable chains add derived HarfBuzz canaries, and `task web:test-gates` permanently
-  plants fourteen defects. All four faces pass the full release verifier.
-- [2026-07-13] `fa770da` — verifier rewritten to check the shipped files: layout rules read back
-  from the WOFF2, HarfBuzz canaries derived from the font's own rules, stylesheet/manifest/notices
-  gates and byte-for-byte determinism.
-- [2026-07-13] `d289e4e` — eight-file two-tier web build. 5,280 KB → 1,070 KB.
-- [2026-07-13] `ef67095`, `3dbf108`, `af273a3` — FontForge 20251009 over-compresses `hmtx` and
-  destroys zero-width glyphs at every TTF round-trip. Four round-trips, all guarded by
-  `font_widths.py`; `task verify:widths` is the gate. The 26.05 build reproduces the shipped
-  v1.0.0 fonts exactly across all 35,402 glyphs.
-- [2026-07-13] `2ea3262` — `shell.nix` replaced by `flake.nix` on nixos-26.05.
-- A cleanup pass (dead code, duplicate build paths, stale docs) is wanted but was deliberately kept
-  out of this work. It is its own session.
-- v1.0.0 has no public GitHub release. Unrelated and not scheduled.
+- [2026-07-14] GLG separated the product contracts: full Han remains in desktop TTF/NF; web WOFF2
+  may omit Han and delegate it to a CJK fallback to avoid multi-megabyte single-character fetches.
+- [2026-07-13] Notes integration rendered correctly. No-Han pages reached 1.07 MB, but sparse-Han
+  pages exposed the coarse `jp` tier: homepage 3.03 MB; `如` note 5.56 MB.
+- [2026-07-13] `a6cf1a7` hardened chained-context verification and added fourteen mutation probes;
+  `d289e4e` implemented the verified 8-file baseline now being superseded.
+- [2026-07-13] `ef67095`, `3dbf108`, `af273a3` repaired FontForge 20251009 advance-width damage at
+  all four TTF round-trips. `task verify:widths` is the desktop guard.
