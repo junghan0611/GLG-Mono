@@ -8,17 +8,8 @@ Closed work moves to `CHANGELOG.md` through the `tag-release` loop.
 Do not start cmap or font implementation yet. The current job is to decide what belongs in
 GLG-Mono, recover durable information from inherited material, and leave a small truthful surface.
 
-## Current checkpoint
-
-- Root document set established: `README.md`, `AGENTS.md`, `NEXT.md`, `ROADMAP.md`, `CHANGELOG.md`.
-- The old `docs/` tree is removed only after its durable content was promoted:
-  - bearing metrics and web/cmap gates → `AGENTS.md`;
-  - completed build, bearing, web and cmap work → `CHANGELOG.md`;
-  - math fallback, Unicode-height ideas and rebuild phases → `ROADMAP.md`;
-  - philosophy and product identity → `README.md`;
-  - terminal screenshot → `assets/glg-mono-terminal.png`.
-- No font implementation changed. Two Python docstrings now point at `AGENTS.md` instead of deleted
-  documents; `webfont_subset.py` also corrects the stale Han count from 13,412 to 13,022.
+Snapshot `v2026.7.14` establishes the recovered root knowledge surface. R0 remains open for the
+tracked-root, inherited-script, tag, and release-asset decisions below.
 
 ## Next concrete move
 
@@ -32,8 +23,8 @@ GLG-Mono, recover durable information from inherited material, and leave a small
    older inherited history and has no matching release.
 4. **Release truth:** inspect the published v1 desktop/NF archives before asserting their internal
    family/variant contents; reconcile the evidence with the Console-first release policy.
-5. **Close R0:** rerun root-link/task/reference checks and the global hooks, then review the staged
-   repository rebuild as one coherent commit. Push and stamp only on explicit GLG request.
+5. **Close R0:** record the decisions above in the durable surfaces, remove their completed NEXT
+   items through the next tag-release loop, and rerun root-link/task/reference checks and hooks.
 
 ## R0 acceptance
 
@@ -41,8 +32,6 @@ GLG-Mono, recover durable information from inherited material, and leave a small
   files.
 - No broken links, stale task names, false coverage claims, or contradictory license statements.
 - Every retained inherited script or vendor directory has an explicit reason to remain.
-- Removed research remains recoverable from git history and its durable findings are represented in
-  AGENTS, ROADMAP, or CHANGELOG.
 - `git diff --check` and the global pre-commit hook pass; no long font build is required for the
   document/repository-only checkpoint.
 

@@ -5,6 +5,8 @@ unreleased until GLG explicitly cuts a CalVer snapshot.
 
 ## Unreleased
 
+## v2026.7.14 — GLG-Mono 재건축 기준선
+
 ### Repository rebuild
 
 - Reframed GLG-Mono as 힣's owned, observable Unicode assembly: exact cmap, one owner per
