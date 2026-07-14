@@ -3,7 +3,7 @@
 
 The garden ships four full faces at ~2.6 MB apiece, so an ordinary Korean page waits on
 5.3 MB of font before it can reflow. Almost all of that weight is Han: the desktop font
-inherits 13,412 ideographs from IBM Plex Sans JP, and a Korean page needs none of them.
+inherits 13,022 Han mappings from IBM Plex Sans JP, and a Korean page needs none of them.
 
 So each face is cut once — `core` (Latin, Hangul, punctuation, symbols) and `jp` (Han,
 Kana, radicals) — and `unicode-range` lets the browser fetch only what the page uses. A
@@ -11,7 +11,7 @@ Korean home page then asks for exactly two files: Regular-core and Bold-core.
 
 Deliberately not done here: no corpus, no frequency map, no dozens of chunks. A
 discarded 192-file prototype did transfer less, but its operational complexity is the
-thing this repository is trying to shed. See docs/WEBFONT_SUBSET.md.
+thing this repository is trying to shed. The durable web contract lives in AGENTS.md.
 
 Usage:  python3 webfont_subset.py [--out build/web]
 """

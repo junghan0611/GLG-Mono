@@ -14,7 +14,7 @@ every mark/base pair the font actually declares is shaped through HarfBuzz twice
 with the source and once with the tier, and the two must agree glyph for glyph.
 
 Gates: coverage, geometry, hinting, metrics, global tables, layout, shaping, stylesheet,
-licensing, determinism. Rationale in docs/WEBFONT_SUBSET.md.
+licensing, determinism. The durable rationale and delivery contract live in AGENTS.md.
 
 Usage:  python3 webfont_verify.py [--web build/web]
 """

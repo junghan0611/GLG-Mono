@@ -6,12 +6,18 @@ Project context for AI agents.
 
 - **`AGENTS.md`** (this file) — durable, shared baseline for any agent (Claude, GPT, Gemini) working on this repo. Edit when a rule or convention stabilizes. Durable facts live here.
 - **`NEXT.md`** — disposable session handoff: the next concrete move, its verification, and blockers. A boot sector, not a knowledge base. Read it at session start; when a NEXT item turns into a stable fact, graduate it into `AGENTS.md` and drop it from NEXT. Branch work uses `NEXT--<branch>.md`, deleted before merging to `main`.
+- **`CHANGELOG.md`** — closed work promoted from NEXT by the `tag-release` loop.
 - **`CLAUDE.md`** — one line, `@AGENTS.md`. Do not put content there.
-- **`docs/`** — design documents that outlive a session. Long rationale belongs here, not in NEXT.
+- **`ROADMAP.md`** — manual long-horizon rebuild phases; NEXT remains the concrete boot sector.
+
+Keep the document surface small: README for people, AGENTS for durable truth, ROADMAP for direction,
+NEXT for active work, and CHANGELOG for closed snapshots. Do not recreate a `docs/` tree.
 
 ## Project Overview
 
-**GLG-Mono** (힣's Monospace Font) is a Korean programming font for knowledge management and AI collaboration. It deliberately combines Hangul, a Korean-standard Hanja profile, Latin and coding symbols; accidental pan-CJK coverage is not a product goal.
+**GLG-Mono** (힣's Monospace Font) is 힣's own Korean programming font. It combines Hangul, Latin,
+coding symbols and a pinned Hanja seed; inherited pan-CJK coverage is not a product goal and is
+being removed. It represents no standard — see the north star below.
 
 **Repository**: junghan0611/GLG-Mono
 **Version**: v1.0.0
@@ -21,7 +27,7 @@ Project context for AI agents.
 
 - **힣 (U+D7A3)**: Last syllable in Korean Unicode, meaning "letting go of ego"
 - **GLG**: "힣" typed on QWERTY keyboard, meaning "giggling" - coding with a smile
-- **Philosophy**: See `docs/PHILOSOPHY.org`
+- **Philosophy**: own and observe the glyphs in the font; completeness is not the goal.
 
 ### Project Heritage
 
@@ -97,8 +103,19 @@ Measured today (Regular): base layers hold 13,563 codepoints with zero Han, yet 
 27,846. It **drops 163 codepoints Plex Sans KR provides** (including `￦` U+FFE6 and `㈜` U+321C,
 because `merge_kr_glyphs()` copies only four Hangul ranges). Against the exact 21,499-codepoint
 contract, the current face has 413 missing (those 163 plus 250 aliases not yet created) and 6,760
-unexpected (1,424 non-Han plus 5,336 Han outside the claimed set). Design:
-`docs/V2_CMAP_CONTRACT.md`.
+unexpected (1,424 non-Han plus 5,336 Han outside the claimed set).
+
+The set equality is necessary but not sufficient. Every proof also requires:
+
+- exactly one owner for every expected codepoint, and zero JP-owned non-seed mappings;
+- a layout **keep-allowlist**; unknown lookup types and unexpected output fail closed in the
+  verifier, not by trusting the subsetter;
+- zero *unreachable* unencoded glyphs. Unencoded mark and composite components are legitimate when
+  reachable from retained cmap, composites, or layout;
+- Regular and Bold checks together, because source faces and Hack marks differ by weight;
+- fullwidth retained Hanja/Hangul, halfwidth Latin, zero-width marks, and `task verify:widths`;
+- no cmap format 14/UVS table unless a future contract explicitly introduces one;
+- preserved physical Italic/BoldItalic faces and the four legal nameID 0 records.
 
 ### Language discipline
 
@@ -288,21 +305,23 @@ task verify:widths      # Verify combining marks keep advance 0 (hmtx regression
   normal-{Weight}-ctrl.txt  - For 1:2 ratio
   35-{Weight}-ctrl.txt      - For 3:5 ratio
 
-/docs                - Documentation
-  PHILOSOPHY.org     - Project philosophy
-  install_via_homebrew.md - Homebrew guide
+/work_scripts        - Utility scripts (env_report.py, check_glyph_number.py)
 
-/work_scripts        - Utility scripts
+/old_script          - Inherited PlemolJP shell scripts; unreferenced, kept as history
 
 build.ini            - Build configuration
 fontforge_script.py  - Stage 1: Font merging
 fonttools_script.py  - Stage 2: Post-processing
 fix_nf_korean_bearing.py - Stage 3: NF post-processing
 font_widths.py       - Advance-width repair for every FontForge TTF round-trip
+webfont_subset.py    - Web: build the WOFF2 tiers
+webfont_verify.py    - Web: the eight gates (reuse its type-6 chained-context projection)
+test_webfont_gates.py - Web: plants 14 defects and demands each gate bites
 test_korean_bearing_nf.py - Korean bearing verification
 test_advance_widths.py - Zero-advance guard (hmtx regression)
 verify_korean_complete.py - Complete Korean glyph validator
 Taskfile.yml         - Build automation
+build_console_all.sh - Console build entry point (Taskfile's web:build error path points here)
 flake.nix            - NixOS development environment (nixos-26.05 pin)
 flake.lock           - Locked nixpkgs revision (matches the host system)
 build_with_taskfile.sh - Main build script
@@ -429,20 +448,90 @@ The final topology is four physical faces: Regular, Bold, Italic and BoldItalic.
 pages request only Regular and Bold. The verified 8-file `{core,jp}` build remains a superseded
 baseline: one Han character fetched an entire ~2 MB `jp` face. Before any later topology change,
 state artifact count, normal-page request count, exclusions and fallback owner, then obtain GLG
-approval. Design and gates: `docs/WEBFONT_SUBSET.md`.
+approval. The constraints in this section are the web delivery contract.
+
+The web verifier checks the delivered WOFF2, never merely the source. It **has been wrong once**: an
+earlier version read the source, and a delivered face with `GSUB` deleted passed all eight gates. A
+gate that cannot fail is not a gate, so `test_webfont_gates.py` (`task web:test-gates`, ~24 s) plants
+fourteen defects in a copy of the distribution and demands a FAIL for each. Any new gate arrives with
+the mutation that proves it bites.
+
+1. **Coverage:** each face's delivered cmap matches its declared exact set; split tiers are disjoint.
+2. **Geometry:** decomposed outlines, advance and LSB match by glyph, including unencoded closure.
+3. **Hinting:** glyph instructions and `cvt `/`fpgm`/`prep`/`gasp` survive. Do **not** demand binary
+   equality of composite glyph records — their component GIDs are renumbered by design.
+4. **Metrics:** compare stable **fields, not tables**. `hhea.numberOfHMetrics`, `maxp.numGlyphs` and
+   `head.checkSumAdjustment` *must* differ; a whole-table check fails on a correct subset.
+5. **Layout/shaping:** derive GPOS mark/base and GSUB ligature/context closure before partitioning;
+   an unknown lookup type **fails closed**. Two traps live here, and both are why the gate models
+   record semantics instead of trusting shaping:
+   - **A chained context is its records, not its coverage.** Delete a type-6 rule's
+     `SubstLookupRecord`s and the contexts still match — they simply substitute nothing, and coverage
+     compares equal. This font makes it concrete: lookup 25 (`ccmp`, five subtables, each invoking
+     lookup 26) has **coverage identical to lookup 29, which carries no records at all**. Project each
+     record as `(SequenceIndex, the rules of the lookup it names)`, resolved by glyph name, because
+     subsetting renumbers lookup indices.
+   - **HarfBuzz composes before it lays out**, so shaping canaries cannot stand in for that check:
+     `d` + U+030C becomes precomposed `dcaron`, and the `d/l/t/L` + caron chain never fires. `g` +
+     U+0326 and `j` + U+0300 have no precomposed form, do fire, and are caught. **A rule no text can
+     reach still must not be silently dropped.**
+6. **Global/legal tables:** preserve `BASE` — `pyftsubset` drops unknown tables by default, so
+   `--passthrough-tables` is required and the result must be verified binary-identical. Keep nameID
+   0/13/14 (`--name-IDs='*' --name-legacy --name-languages='*'`), OFL and third-party notices.
+7. **Stylesheet truth:** CSS ranges, filenames, hashes, sizes and manifest totals describe what ships.
+8. **Determinism:** two clean builds match byte-for-byte. Required because notes serves WOFF2
+   immutable for a year.
+
+**Keep `post` glyph names.** Dropping them (post 3.0) is legitimate, but measured on the full Regular
+face it saves only 79,768 bytes (~3%) — not enough to weaken name-based verification. If it is ever
+done, subset **with** `--glyph-names`, verify against the source by name, then rewrite only `post` and
+diff every other sfnt table against the verified intermediate.
+
+The next two notes apply only when reproducing or inspecting the **superseded eight-file baseline**;
+the final four-face contract has no `jp` tier:
+
+- **`test_advance_widths.py` guards the desktop build. Never point it at a `jp` tier** — that tier has
+  neither the Console discriminator characters nor most of the Latin contract glyphs. The web
+  verifier compares each tier against its source face instead, which subsumes the zero-advance check.
+- **Declare the baseline `jp` range by its blocks, not by its exact cmap.** Stating the cmap
+  precisely takes 4,664 spans (≈50 KB per face, 200 KB across four), and the garden bundles its
+  stylesheet into one render-blocking `index.css` — that moves the weight out of the font and into
+  the CSS. Measured: 210.5 KB becomes 11.3 KB. The cost is that a missing ideograph fetches the tier
+  and then falls back: a wasted request, never a wrong glyph. Codepoints shaping pulls into `core`
+  are punched out of the `jp` range so the tiers never claim the same character; the verifier checks.
 
 Do not reintroduce corpus-trained Hangul/Han frequency slicing or dozens of outputs. A discarded
-192-file prototype proved that approach can minimize transfer but violates the cleanup goal.
-Subsetting must preserve Korean bearing, physical Italic/BoldItalic, metrics, hinting, `BASE`, legal
-names and supported-profile shaping. GPOS mark inputs include both marks and covered bases; GSUB
-multi-input ligatures cannot cross physical files.
+192-file prototype proved that approach can minimize transfer but violates the cleanup goal. The
+honest ceiling of a corpus-free design is that Hangul cannot be split further without frequency data
+— Korean text scatters across the syllable block and would fetch every codepoint-ordered slice
+anyway. Subsetting must preserve Korean bearing, physical Italic/BoldItalic, metrics, hinting,
+`BASE`, legal names and supported-profile shaping. GPOS mark inputs include both marks and covered
+bases; GSUB multi-input ligatures cannot cross physical files. In the superseded baseline, 14 PUA
+codepoints were its only deliberate exclusion and remain recorded in that manifest. The final
+four-face contract instead excludes Han and Kana by its own exact cmap.
 
 ### Glyph Handling
+
+**Recovered metrics contract:**
+
+```text
+advance width = LSB + (bbox.xMax - bbox.xMin) + RSB
+offset        = (target width - bbox width) / 2 - bbox.xMin
+```
+
+IBM Plex Sans KR Hangul uses advance 892 while inherited JP fullwidth glyphs use 1000. GLG maps
+those outlines into 1056 (1:2) or 1000 (3:5) cells. The original KR outlines showed representative
+28–45 unit side-bearing asymmetry; bbox centring reduced that to 0–2 units. The residual is accepted
+TrueType integer rounding, not a reason for another global transform. The historical lesson is to
+measure width, bbox, LSB and RSB from the generated font rather than infer them from Unicode blocks.
 
 **Custom Adjustments:**
 - Quotation marks: Enlarged and repositioned
 - Punctuation (;:,.) : Scaled up 8%
-- 'r' glyph: Custom via .sfd (non-italic)
+- 'r' glyph: Custom via `source/AdjustedGlyphs/r-{Weight}.sfd` (non-italic).
+  `fontforge_script.py:473` clears `eng_font[0x0072]` so the .sfd outline wins. The hand-adjustment
+  that produced those files, inherited from PlemolJP: the point near the centre moves `x: -35`, the
+  right end of the baseline stroke moves `x: -50`. Redo this if a new weight ever needs an `r`.
 - Full-width brackets: Widened ±180 units
 - Arrow symbols: Enlarged for visibility
 
@@ -482,11 +571,13 @@ multi-input ligatures cannot cross physical files.
 
 ## Resources
 
-### Documentation
+### Repository documents
 
-- Philosophy: `docs/PHILOSOPHY.org`
-- Korean README: `README-KO.md`
-- English README: `README.md`
+- `README.md` — Korean, single public introduction. There is no `README-KO.md`; do not create one.
+- `AGENTS.md` — durable product, build and verification contract.
+- `ROADMAP.md` — long-horizon repository and font rebuild phases.
+- `NEXT.md` — active handoff and unresolved repo hygiene.
+- `CHANGELOG.md` — closed snapshots maintained by the `tag-release` loop.
 - Digital Garden: https://notes.junghanacs.com
 
 ### Source Projects

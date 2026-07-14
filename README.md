@@ -3,57 +3,62 @@
 [![License: OFL-1.1](https://img.shields.io/badge/License-OFL--1.1-blue.svg)](https://opensource.org/licenses/OFL-1.1)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Hih's Monospace Font for Knowledge Management & AI Collaboration**
+> 힣이 직접 쓰고 고치는 한글 프로그래밍 폰트
 
-GLG-Mono merges [IBM Plex Mono](https://github.com/IBM/plex) (English) with IBM Plex Sans KR (Korean) into a single monospace font with comprehensive Unicode coverage. Designed for terminals, editors, and the web.
+터미널과 에디터에서 한글·라틴·코딩 기호를 한 벌로 쓰기 위한 고정폭 폰트입니다. IBM Plex Mono가
+라틴과 코딩 기호를, IBM Plex Sans KR이 한글을 맡고, 한자는 IBM Plex Sans JP에서 가져옵니다.
 
-[Philosophy](docs/PHILOSOPHY.org) · [Releases](https://github.com/junghan0611/GLG-Mono/releases)
+[릴리스](https://github.com/junghan0611/GLG-Mono/releases) · [로드맵](ROADMAP.md) · [설계와 작업 규칙](AGENTS.md) · [다음 작업](NEXT.md)
 
-## Name Origin
+## 이름
 
-**힣 (U+D7A3)** — the last syllable in Korean Unicode. Philosophical meaning: "letting go of ego." Technical meaning: end boundary of `[가-힣]`.
+> 폰트는 단순한 도구가 아니다. 존재의 표현이다.
 
-**GLG** — "힣" typed on QWERTY keyboard. English meaning: "giggling" — coding with a smile.
+**힣 (U+D7A3)** — 한글 유니코드의 마지막 음절. `[가-힣]`의 끝 경계이자, "에고를 내려놓음".
+힣은 나를 버리기 위함이고, 잘 쓰려는 나를 내려놓고 갈겨 쓰기 위한 이름이다. 모두의 힣이다.
 
-## Screenshot
+**GLG** — 쿼티 자판에서 "힣"을 친 모양. 웃으며 코딩한다는 뜻의 giggling.
 
-![GLG-Mono in action](docs/20251113T153802-screenshot.png)
+## 무엇이고, 무엇이 아닌가
 
-*GLG-Mono in terminal: Korean glyph alignment, Nerd Fonts icons, Unicode completeness*
+GLG-Mono는 **힣의 작업 환경을 위한 폰트**입니다. 어떤 표준을 대표하지 않고, 정본 한자 목록을
+주장하지 않으며, "완전한 CJK 폰트"를 목표로 하지 않습니다. 대신 세 가지를 지킵니다.
 
-## Font Families
+1. 지금 어떤 코드포인트를 지원하는지 **정확한 cmap으로 공개**한다
+2. 각 글리프가 **어느 소스에서 왔는지** 추적한다
+3. **선언하지 않은 문자가 빌드에 섞이지 않게** 한다
 
-| Family | Width Ratio | Description |
-|--------|-------------|-------------|
-| **GLG-Mono** | 1:2 (528:1056) | Standard monospace |
-| **GLG-MonoNF** | 1:2 | + Nerd Fonts (3,000+ icons) |
-| **GLG-Mono35** | 3:5 (600:1000) | Wider half-width characters |
-| **GLG-Mono35NF** | 3:5 | Wider + Nerd Fonts |
+지원하지 않는 한자는 결함이 아닙니다. 힣이 쓰지 않는 한자일 뿐입니다. 필요해지면 seed에
+코드포인트를 넣고 그것을 그릴 donor를 명시적으로 연결하면 됩니다.
 
-Each family: **16 fonts** (8 weights × 2 styles). Total: **64 fonts**.
+![GLG-Mono terminal sample](assets/glg-mono-terminal.png)
 
-**Weights**: Thin, ExtraLight, Light, Text, Regular, Medium, SemiBold, Bold
+## 지금 배포되는 것 — v1.0.0
 
-### Which to Choose
+현재 릴리스는 **PlemolJP 포크에서 이어받은 v1 산출물**입니다. 위의 계약은 아직 적용되지
+않았습니다. 실측값(GLG-Mono-Regular.ttf):
 
-- **Terminal**: `GLG-MonoNF` (recommended)
-- **English-heavy code**: `GLG-Mono35NF` (wider Latin characters)
-- **Minimal**: `GLG-Mono` (no Nerd Fonts, smaller file)
-- **Web**: Use WOFF2 files from releases (see below)
+| 항목 | 값 |
+|---|---:|
+| 전체 글리프 | 35,402 |
+| 매핑된 코드포인트 | 27,846 |
+| 한글 음절 | 11,172 (전체) |
+| 한자 | 13,022 |
 
-## Download
+v1은 상위 폰트에서 한자와 가나를 **의도 없이 통째로 물려받았고**, 반대로 IBM Plex Sans KR이 가진
+한국어 문자 163자를 흘리고 있습니다 — `￦`(U+FFE6), `㈜`(U+321C), 원문자 한글, `㎧`·`㎩` 같은 단위
+기호가 여기 포함됩니다. 이걸 고치는 것이 v2입니다.
 
-### Desktop Fonts (TTF)
+### 릴리스 자산
 
-Download from [Releases](https://github.com/junghan0611/GLG-Mono/releases):
+| 자산 | 내용 |
+|---|---|
+| `GLG-Mono_v1.0.0.zip` | 데스크톱 TTF |
+| `GLG-MonoNF_v1.0.0.zip` | Nerd Fonts 포함 TTF |
+| `GLG-Mono-WebFonts_v1.0.0.zip` | 웹폰트 묶음 |
+| `GLG-Mono-{Regular,Bold,Italic,BoldItalic}.woff2` | 개별 WOFF2 (2.6–2.8 MB) |
 
-| Asset | Contents |
-|-------|----------|
-| `GLG-Mono_vX.X.X.zip` | GLG-Mono + GLG-Mono35 (32 TTF) |
-| `GLG-MonoNF_vX.X.X.zip` | GLG-MonoNF + GLG-Mono35NF (32 TTF) |
-| `GLG-Mono-WebFonts_vX.X.X.zip` | WOFF2 for web (Regular, Bold, Italic, BoldItalic) |
-
-### Installation
+### 설치
 
 ```bash
 # Linux
@@ -61,175 +66,121 @@ mkdir -p ~/.local/share/fonts/GLG-Mono
 unzip GLG-Mono_*.zip -d ~/.local/share/fonts/GLG-Mono
 fc-cache -fv
 
-# macOS — double-click TTF files, or:
+# macOS — TTF 더블클릭, 또는
 cp *.ttf ~/Library/Fonts/
 
-# Windows — select TTF files → right-click → Install
+# Windows — TTF 선택 → 우클릭 → 설치
 ```
 
-## Web Fonts (WOFF2)
+## 다음 — v2 cmap 계약 (진행 중)
 
-GLG-Mono is available as WOFF2 web fonts. Download from releases or use directly from GitHub:
+v2는 폰트의 지원 범위를 **정확한 Unicode cmap**으로 공개하고, 코드포인트마다 소유 레이어를
+붙이며, 선언되지 않은 문자를 빌드에서 막습니다. 이맥스가 유니코드 범위로 폰트를 고르기 때문에,
+지원 범위 자체가 제품 인터페이스입니다.
 
-### Self-Hosted
+레이어 소유권 (위가 이김):
 
-```html
-<style>
-  @font-face {
-    font-family: 'GLG Mono';
-    src: url('/fonts/GLG-Mono-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-  }
-  @font-face {
-    font-family: 'GLG Mono';
-    src: url('/fonts/GLG-Mono-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-  }
-  @font-face {
-    font-family: 'GLG Mono';
-    src: url('/fonts/GLG-Mono-Italic.woff2') format('woff2');
-    font-weight: 400;
-    font-style: italic;
-    font-display: swap;
-  }
-  @font-face {
-    font-family: 'GLG Mono';
-    src: url('/fonts/GLG-Mono-BoldItalic.woff2') format('woff2');
-    font-weight: 700;
-    font-style: italic;
-    font-display: swap;
-  }
-
-  body { font-family: 'GLG Mono', monospace; }
-</style>
+```text
+custom adjustments
+> IBM Plex Mono        — 라틴, 코딩 기호
+> IBM Plex Sans KR     — 한글과 KR이 가진 모든 한국어 문자
+> IBM Plex Sans JP     — 한자 seed만
+> Hack                 — 보충 글리프
+> Nerd Fonts           — NF 변형에만
 ```
 
-### From GitHub Releases (CDN)
+한자는 Source Han Sans KR 2.005의 BMP 한자 8,567자를 **seed**로 삼습니다. 표준이 아니라 재현
+가능하게 고정한 출발 목록입니다. JP donor가 실제로 그릴 수 있는 7,936자를 폰트가 주장하고, 나머지
+631자는 다른 폰트로 fallback됩니다.
 
-```html
-<!-- Replace vX.X.X with actual version -->
-<style>
-  @font-face {
-    font-family: 'GLG Mono';
-    src: url('https://github.com/junghan0611/GLG-Mono/releases/download/vX.X.X/GLG-Mono-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-  }
-</style>
-```
+게이트는 단순합니다. 빌드마다 네 집합을 뽑고 `missing == 0`, `unexpected == 0`을 요구합니다.
 
-### Web Font Files
+계약과 검증 기준은 [`AGENTS.md`](AGENTS.md)에 둡니다.
 
-| File | Size | Weight/Style |
-|------|------|-------------|
-| `GLG-Mono-Regular.woff2` | 2.6 MB | 400 Normal |
-| `GLG-Mono-Bold.woff2` | 2.6 MB | 700 Normal |
-| `GLG-Mono-Italic.woff2` | 2.8 MB | 400 Italic |
-| `GLG-Mono-BoldItalic.woff2` | 2.8 MB | 700 Italic |
+## 웹폰트
 
-## Glyph Coverage Verification
+`task web:build`가 face당 두 조각(`core`/`jp`)으로 WOFF2 8개를 만들고, `task web:verify`가 커버리지·
+기하·힌팅·메트릭·셰이핑·라이선스·결정성을 검증합니다.
 
-WOFF2 conversion is **lossless** — Brotli compression only, no glyph data lost.
+이 2단 구성은 **검증된 실험 baseline이지 최종 배포 계약이 아닙니다.** 한자 한 글자 때문에 ~2 MB
+`jp` face를 통째로 받는 문제가 있어, 웹은 Han/가나를 싣지 않고 브라우저 fallback에 넘기는 4-face
+구성으로 재설계 중입니다. 설계와 게이트는 [`AGENTS.md`](AGENTS.md), 다음 구현 순서는
+[`NEXT.md`](NEXT.md)에 둡니다.
 
-### TTF vs WOFF2 Comparison (GLG-Mono-Regular)
+릴리스의 WOFF2 4종은 현재 v1 전체 face입니다.
 
-| Category | TTF | WOFF2 | Match |
-|----------|-----|-------|-------|
-| Total glyphs | 35,402 | 35,402 | ✅ |
-| Mapped codepoints | 27,846 | 27,846 | ✅ |
-| Hangul Syllables (AC00-D7AF) | 11,172 | 11,172 | ✅ Full |
-| CJK Unified (4E00-9FFF) | 12,710 | 12,710 | ✅ |
-| Kana / Bopomofo | 622 | 622 | ✅ |
-| ASCII (0-7F) | 97 | 97 | ✅ |
-| Latin Extended | 295 | 295 | ✅ |
-| Greek / Cyrillic | 289 | 289 | ✅ |
-| SMP (10000+) | 391 | 391 | ✅ |
-| Font tables | 19 | 19 | ✅ All preserved |
-| **힣 (U+D7A3)** | ✅ | ✅ | ✅ |
-| **Difference** | — | — | **0 codepoints** |
+## 빌드
 
-File size: 7.5 MB (TTF) → 2.6 MB (WOFF2) = **65% reduction**.
-
-### Unicode Coverage Highlights
-
-```
-ASCII/Latin:     § ¶ † ‡ № ⓕ ↔ → ⊢ ∉ © ¬ ¢ ¤ µ ¥ £ ¡ ¿
-Programming:     λ ƒ ∘ ∅ ∈ ∉ ∧ ∨ ∀ ∃
-CJK Brackets:   『』 《》 〈〉 ｢｣
-Ancient Korean:  ㅹ ㆅ ㅺ ㉼ ㉽
-Hangul:          가 → 힣 (11,172 syllables, 100%)
-```
-
-## Key Features
-
-- **Korean Glyph Bearing Adjustment**: Bbox-based center alignment prevents overlap
-- **Nerd Fonts Post-Processing**: Bearing fix after FontPatcher merge (3,000+ icons)
-- **Console Mode**: East Asian Ambiguous Width → half-width for terminal alignment
-- **8 Weights**: Thin through Bold, each with Regular and Italic
-
-## Building from Source
-
-Requires NixOS or manually: Python 3, FontForge, fontTools, ttfautohint, Task.
+NixOS flake가 FontForge·fontTools·ttfautohint·Task를 모두 제공합니다. **모든 빌드는 dev shell
+안에서** 실행합니다.
 
 ```bash
-# NixOS — all dependencies provided
-nix-shell
+nix develop
 
-# Quick test (Regular weight only)
-task quick
+task                 # 전체 태스크 목록
+task quick           # 빠른 검증 빌드 (Regular만, ~3분)
+task full            # 데스크톱 전체 빌드
+task full:nerd       # Nerd Fonts 포함 (1시간 이상)
+task web:all         # 웹폰트 빌드 + 검증
 
-# Full build
-task full
-
-# With Nerd Fonts
-task full:nerd
-
-# Generate web fonts
-task webfont        # if available, or:
-nix-shell -p woff2 --run "woff2_compress build/GLG-Mono-Regular.ttf"
+task verify          # 한글/한자 글리프 확인
+task verify:widths   # combining mark advance 0 회귀 가드 (필수)
+task verify:bearing  # NF 패치 후 한글 bearing 확인
 ```
 
-See `Taskfile.yml` for all build targets.
+### 폰트 패밀리
 
-## Project Lineage
+| 패밀리 | 폭 비율 | 용도 |
+|---|---|---|
+| GLG-Mono | 1:2 (528:1056) | 기본 |
+| GLG-MonoConsole | 1:2 | 터미널 정렬 최적화 (권장) |
+| GLG-Mono35 | 3:5 (600:1000) | 라틴 문자를 넓게 |
+| GLG-Mono35Console | 3:5 | 넓은 라틴 + 콘솔 |
 
-```
+각 패밀리는 8 weight × 2 style = 16벌. `NF` 접미사는 Nerd Fonts 포함, `HS`는 전각 공백 숨김입니다.
+
+## 구성과 출처
+
+글리프 레이어와 그 출처:
+
+| 레이어 | 소스 | 라이선스 |
+|---|---|---|
+| 라틴 · 코딩 기호 | IBM Plex Mono | OFL 1.1 |
+| 한글 | IBM Plex Sans KR | OFL 1.1 |
+| 한자 | IBM Plex Sans JP | OFL 1.1 |
+| 보충 글리프 | Hack (Source Foundry) | MIT + Bitstream Vera |
+| 아이콘 (NF 변형) | Nerd Fonts | MIT |
+
+IBM Plex, Hack, Nerd Fonts, PlemolJP — 네 건의 저작권이 폰트 nameID 0에 그대로 남아 있습니다.
+레퍼토리를 다시 짜도 법적 출처는 지워지지 않습니다.
+
+### 계보
+
+```text
 IBM Plex (2017, IBM)
-  ├─ IBM Plex Mono (English)
-  ├─ IBM Plex Sans JP (Japanese)
-  └─ IBM Plex Sans KR (Korean)
-       ↓
-PlemolJP (2021, yuru7) → Japanese programming font
-       ↓
-PlemolKR (2024, soomtong) → Korean programming font
-       ↓
-GLG-Mono (2025, junghan0611)
-  → Knowledge management & AI collaboration
-  → Unicode completeness + web fonts
+  → PlemolJP (2021, yuru7)      — 일본어 프로그래밍 폰트
+  → PlemolKR (2024, soomtong)   — 한국어 프로그래밍 폰트
+  → GLG-Mono (2025, junghan0611)
 ```
 
-## License
+이 저장소는 PlemolJP의 포크입니다. IBM Plex Sans JP가 들어있고 v1 빌드가 그 위에 구성된 이유가
+그것입니다. 빌드 구조 역시 PlemolJP에서 계승했지만, 이 저장소의 빌드 스크립트는 MIT입니다 —
+폰트(OFL 1.1)와 코드(MIT)는 다른 층위입니다. 상위 프로젝트는 2025-06 이후 갱신되지 않았고, 우리는
+따라가지 않습니다.
 
-- **Font files**: [SIL Open Font License 1.1](https://opensource.org/licenses/OFL-1.1)
-- **Build scripts**: [MIT License](https://opensource.org/licenses/MIT)
+## 라이선스
 
-## Links
+- **폰트 파일**: [SIL Open Font License 1.1](https://opensource.org/licenses/OFL-1.1)
+- **빌드 스크립트**: [MIT License](https://opensource.org/licenses/MIT)
 
-- **Digital Garden**: https://notes.junghanacs.com
-- **Philosophy**: [docs/PHILOSOPHY.org](docs/PHILOSOPHY.org)
-- **PlemolJP**: https://github.com/yuru7/PlemolJP
-- **PlemolKR**: https://github.com/soomtong/PlemolKR
-- **IBM Plex**: https://github.com/IBM/plex
+## 링크
 
-## Contributing
-
-Issues and pull requests welcome.
+- 변경 기록: [`CHANGELOG.md`](CHANGELOG.md)
+- 디지털 가든: https://notes.junghanacs.com
+- IBM Plex: https://github.com/IBM/plex
+- PlemolJP: https://github.com/yuru7/PlemolJP
+- PlemolKR: https://github.com/soomtong/PlemolKR
 
 ---
 
-**"힣 for everyone"** — Code with a smile 🙂
+**"모두의 힣"** — Code with a smile 🙂
