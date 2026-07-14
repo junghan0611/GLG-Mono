@@ -1,24 +1,22 @@
 # Web Font Delivery — Han Fallback Redesign
 
-Status: **redesign approved; implementation pending** (2026-07-14). The verified 8-file build is
-an experimental baseline, not the final delivery contract.
+Status: **four-face fallback contract approved; implementation pending** (2026-07-14). The verified
+8-file build is an experimental baseline, not the final delivery contract.
 
-This work changes only the web deliverable. The inherited PlemolJP desktop build remains intact:
-IBM Plex Sans JP stays the base, and desktop TTF/NF releases retain their complete coverage,
-including all Han.
+This work changes only the web deliverable and does not wait for the desktop v2 migration. Desktop
+product direction lives in `V2_KOREAN_PROFILE.md`.
 
 ## 2026-07-14 decision
 
-The custom web faces may omit Han and delegate those codepoints to a CJK fallback. Readable,
-non-tofu Han is sufficient on the web; matching GLG's inherited desktop Han outlines is not. This
-avoids fetching an entire ~2 MB `jp` face for one `脈` or `如`. Kana is not part of this exclusion
-and must remain in the supported web profile unless GLG explicitly changes that contract.
+The web build emits four physical GLG faces—Regular, Bold, Italic and BoldItalic—and claims neither
+Han nor Japanese syllabaries. A system or remote CJK fallback renders Han. Readable, non-tofu Han is
+sufficient on the web; matching GLG's desktop donor outlines is not. This avoids fetching an entire
+~2 MB `jp` face for one `脈` or `如` and removes Kana that is outside the Korean-first product scope.
 
 Do not replace the coarse Han tier with corpus-trained or frequency-ordered chunks. Before coding,
-prove the fallback in the notes browser checkpoint, then state the new artifact count, ordinary-page
-request count, intentional exclusion set and fallback owner. Preserve the four physical
-Regular/Bold/Italic/BoldItalic faces and every existing verifier guarantee for the supported web
-profile.
+prove fallback in the notes browser checkpoint and state artifact count, ordinary-page request
+count, exclusions and fallback owner. Preserve all existing verifier guarantees for the retained
+web profile and the four physical styles.
 
 The remainder of this document describes the current two-tier implementation and its verifier. It
 is the baseline to modify, not a contract to ship unchanged.

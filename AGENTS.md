@@ -11,7 +11,7 @@ Project context for AI agents.
 
 ## Project Overview
 
-**GLG-Mono** (힣's Monospace Font) is a Korean programming font for knowledge management and AI collaboration. It merges IBM Plex Mono (English) with IBM Plex Sans KR (Korean) to provide complete Unicode coverage for the 8-Layer ecosystem.
+**GLG-Mono** (힣's Monospace Font) is a Korean programming font for knowledge management and AI collaboration. It deliberately combines Hangul, a Korean-standard Hanja profile, Latin and coding symbols; accidental pan-CJK coverage is not a product goal.
 
 **Repository**: junghan0611/GLG-Mono
 **Version**: v1.0.0
@@ -39,13 +39,25 @@ PlemolKR (2024, soomtong)
     ↓
 GLG-Mono (2025, junghan0611)
   - Knowledge management & AI collaboration font
-  - Unicode completeness (87% → 100% goal)
+  - Korean-first repertoire: Hangul + Hanja + Latin + coding symbols
   - 8-Layer ecosystem integration
 ```
 
 **Upstream**: <https://github.com/yuru7/PlemolJP> — a *Japanese* programming font. This repo is a
-fork of it, which is why IBM Plex Sans JP is present and why the build is structured around it.
+fork of it, which is why IBM Plex Sans JP is present and why the v1 build is structured around it.
 Upstream has had no updates since 2025-06; we do not track it.
+
+### v2 North Star — Korean-first layered assembly
+
+- Product layers are explicit: IBM Plex Sans KR supplies Hangul, IBM Plex Mono supplies Latin,
+  a pinned Korean profile defines Hanja, and Plex Mono/Hack/custom/Nerd layers supply symbols.
+- The first Hanja profile is Source Han Sans KR 2.005's **8,567 BMP ideograph mappings**. Its 84
+  supplementary mappings deliberately fall back in v2-A. Repertoire is generated from pinned
+  provenance, never education policy, hand curation or the garden corpus.
+- IBM Plex Sans JP may supply profile-matching outlines during the low-risk v2-A proof, but JP is
+  heritage/donor, not product identity. Kana, Bopomofo and Japanese regional features are excluded.
+- If the inherited JP-base pipeline cannot produce that clean output without fragile exceptions,
+  stop and move to v2-B neutral/KR-first assembly. Design: `docs/V2_KOREAN_PROFILE.md`.
 
 ## Development Environment
 
@@ -328,43 +340,44 @@ git push origin main
 
 ### Font Composition and Provenance
 
-**IBM Plex Sans JP is the base font.** `fontforge_script.py:214` opens `jp_font` and merges Korean
-onto it (`merge_kr_glyphs`). This follows directly from the fork: PlemolJP is a Japanese font, and
-we inherited its build structure rather than rewriting it around a Korean base. It is heritage, not
-an accident. Consequences any agent touching this repo must know:
+**Current v1 fact:** `fontforge_script.py:214` opens IBM Plex Sans JP as `jp_font` and merges Korean
+onto it. That inherited implementation explains the shipped **13,412 Han glyphs and 189 Kana**; it
+is not the v2 product contract. v2 owns only its declared Korean-first repertoire. In v2-A, JP may
+remain the internal assembly vehicle and Hanja outline donor only if the output inventory, layout
+and metrics are clean. Otherwise activate the v2-B neutral/KR-first assembly described in
+`docs/V2_KOREAN_PROFILE.md`.
 
-- The shipped font carries **13,412 Han glyphs (48.1% of the cmap)** and 189 Kana. The desktop font
-  wants them. **Do not "clean" them out of the source build**, and do not restructure the build to
-  make KR the base — that is a rewrite of upstream, not a fix.
-- Italic builds use `jp_style="Regular", eng_style="Italic"` (`:131`). So Latin is IBM Plex Mono's
-  **true italic**, while CJK is an algorithmic `skew(9°) + translate(-40, 0)` oblique
-  (`transform_italic_glyphs`, `:699`). They are not the same kind of italic.
-- `merge_hack()` (`:912`) runs in the **core build**, independent of `--skip-nerd`. Hack glyphs are
-  in every face.
+- Repertoire and donor are independent. A donor swap may preserve profile topology but changes
+  provenance, outlines, geometry goldens and visual proof. Neither JP nor TC is Korean-canonical by
+  assumption.
+- Italic builds currently use `jp_style="Regular", eng_style="Italic"` (`:131`). Latin is IBM Plex
+  Mono's **true italic**; retained CJK is algorithmic `skew(9°) + translate(-40, 0)` oblique. v2
+  must preserve the physical Italic/BoldItalic faces while removing Japanese width sentinels.
+- `merge_hack()` runs in the **core build**, independent of `--skip-nerd`; Hack glyphs are in every
+  face.
 
 **Four copyrights live in nameID 0** — IBM Plex, Hack (Source Foundry; MIT + Bitstream Vera),
-Nerd Fonts (Ryan L McIntyre), PlemolJP (Yuko Otawara). Any derived artifact must preserve them.
-`pyftsubset` silently drops nameID 0/13/14 unless given `--name-IDs='*' --name-legacy`.
+Nerd Fonts (Ryan L McIntyre), PlemolJP (Yuko Otawara). Refactoring repertoire does not erase legal
+provenance. `pyftsubset` silently drops nameID 0/13/14 unless given `--name-IDs='*' --name-legacy`.
 
 ### Web Fonts
 
-Desktop and web have different coverage contracts. **Desktop TTF/NF keeps all inherited Han**;
-never remove it from the source build or restructure the JP base for a payload optimization. Web
-WOFF2 may intentionally omit Han and let a CJK fallback render it: readable, non-tofu output is the
-web acceptance bar, not pixel parity with the desktop Han outlines.
+Desktop and web have different coverage contracts. Desktop v2 carries the Korean BMP Hanja profile
+that its donor can render; web WOFF2 intentionally carries **no Han and no Japanese syllabaries**.
+A system or remote CJK fallback owns Han on the web, where readable non-tofu output—not parity with
+the desktop donor—is the acceptance bar.
 
-The verified 8-file `{core,jp}` build is now a superseded baseline: one Han character fetches an
-entire ~2 MB `jp` face. The next web contract removes that Han payload while retaining four physical
-Regular/Bold/Italic/BoldItalic faces, Kana and required shaping inputs. Before changing topology,
-state artifact count, normal-page request count, intentional exclusions and fallback owner; obtain
-GLG approval for any later change. Design status and acceptance gates: **`docs/WEBFONT_SUBSET.md`**.
+The final topology is four physical faces: Regular, Bold, Italic and BoldItalic. Ordinary Korean
+pages request only Regular and Bold. The verified 8-file `{core,jp}` build remains a superseded
+baseline: one Han character fetched an entire ~2 MB `jp` face. Before any later topology change,
+state artifact count, normal-page request count, exclusions and fallback owner, then obtain GLG
+approval. Design and gates: `docs/WEBFONT_SUBSET.md`.
 
 Do not reintroduce corpus-trained Hangul/Han frequency slicing or dozens of outputs. A discarded
-192-file prototype proved that approach can minimize transfer but violates this repository's
-cleanup and maintainability goal. Subsetting must preserve the v1.0.0 Korean bearing fix, physical
-Italic/BoldItalic outlines, vertical metrics, hinting, `BASE`, legal names and supported-profile
-shaping. GPOS mark inputs include both marks and covered bases; GSUB multi-input ligatures cannot
-cross physical files.
+192-file prototype proved that approach can minimize transfer but violates the cleanup goal.
+Subsetting must preserve Korean bearing, physical Italic/BoldItalic, metrics, hinting, `BASE`, legal
+names and supported-profile shaping. GPOS mark inputs include both marks and covered bases; GSUB
+multi-input ligatures cannot cross physical files.
 
 ### Glyph Handling
 
